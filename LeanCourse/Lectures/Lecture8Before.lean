@@ -401,28 +401,68 @@ example (x : ℝ) : x * 1 = x := mul_one x
 /- 1. Define the structure of "strict bipointed types", i.e. a type together with 2 unequal points
 `x₀ ≠ x₁` in it.
 Then state and prove the lemma that for any object in this class we have `∀ z, z ≠ x₀ ∨ z ≠ x₁.` -/
+@[ext] structure StrBiPoint (α : Type*) where
+  x₀ : α
+  x₁ : α
+  neg : x₀ ≠ x₁
+
+lemma lemma_1 {α : Type*} {p : StrBiPoint α} {z : α} : z ≠ p.x₀ ∨ z ≠ p.x₁ := by
+  by_contra h
+  push_neg at h
+  have : p.x₀ = p.x₁ := by rw [← h.2, ← h.1]
+  exact p.neg this
 
 
 
 /- 2. Define scalar multiplication of a real number and a `Point`.
 Also define scalar multiplication of a positive real number and a `PosPoint`. -/
+def Point.scalar_mul (x : ℝ) (p : Point) : Point := ⟨x * p.x, x * p.y, x * p.z⟩
 
+@[simp] lemma scalar_mul_x (a : ℝ) (p : Point) : (Point.scalar_mul a p).x = a * p.x := by rfl
+@[simp] lemma scalar_mul_y (a : ℝ) (p : Point) : (Point.scalar_mul a p).y = a * p.y := by rfl
+@[simp] lemma scalar_mul_z (a : ℝ) (p : Point) : (Point.scalar_mul a p).z = a * p.z := by rfl
+
+def PosPoint'.scalar_mul (x : ℝ) (p : PosPoint') (h : x > 0) : PosPoint' :=
+{ Point.scalar_mul x p.toPoint with
+  x_pos := by simp [h, p.x_pos]
+  y_pos := by simp [h, p.y_pos]
+  z_pos := by simp [h, p.z_pos] }
 
 
 /- 3. Define Pythagorean triples, i.e. triples `a b c : ℕ` with `a^2 + b^2 = c^2`.
 Give an example of a Pythagorean triple, and show that multiplying a Pythagorean triple by a
 constant gives another Pythagorean triple. -/
+structure PythagoreanTriple extends Triple ℕ where
+  pyth : x ^ 2 + y ^ 2 = z ^ 2
 
+def p : PythagoreanTriple := ⟨⟨3,4,5⟩, by norm_num⟩
+
+def PythagoreanTriple.mul (p : PythagoreanTriple) (a : ℕ) : PythagoreanTriple where
+  x := a * p.x
+  y := a * p.y
+  z := a * p.z
+  pyth := by simp; ring; rw[← p.pyth]; ring
 
 
 /- 4. Prove that triples of equivalent types are equivalent. -/
 
-example (α β : Type*) (e : α ≃ β) : Triple α ≃ Triple β := sorry
+example (α β : Type*) (e : α ≃ β) : Triple α ≃ Triple β where
+  toFun := fun ⟨a, b, c⟩ ↦ ⟨e a, e b, e c⟩
+  invFun := fun ⟨a, b, c⟩ ↦ ⟨e.symm a, e.symm b, e.symm c⟩
+  left_inv := by intro x; simp
+  right_inv := by intro x; simp
 
 
 /- 5. Show that if `G` is an abelian group then triples from elements of `G` is an abelian group. -/
 
-example (G : Type*) [AbelianGroup' G] : AbelianGroup' (Triple G) := sorry
+example (G : Type*) [AbelianGroup' G] : AbelianGroup' (Triple G) where
+  add := fun ⟨x, y, z⟩ ⟨a, b, c⟩ ↦ ⟨x +' a, y +' b, z +' c⟩
+  comm := by intro x y; simp [AbelianGroup'.comm]
+  assoc := by intro x y z; simp [AbelianGroup'.assoc]
+  zero := ⟨𝟘, 𝟘, 𝟘⟩
+  add_zero := by intro x; simp [AbelianGroup'.add_zero]
+  neg := fun ⟨x, y, z⟩ ↦ ⟨-'x, -'y, -'z⟩
+  add_neg := by intro x; simp [AbelianGroup'.add_neg]
 
 
 

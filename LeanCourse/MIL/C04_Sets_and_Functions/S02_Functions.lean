@@ -34,49 +34,85 @@ example : s ⊆ f ⁻¹' (f '' s) := by
   use x, xs
 
 example : f '' s ⊆ v ↔ s ⊆ f ⁻¹' v := by
-  sorry
+  constructor
+  intro h x hs
+  simp
+  apply h
+  exact mem_image_of_mem f hs
+  intro h y hs
+  obtain ⟨x, hx, hxy⟩ := hs
+  subst y
+  exact h hx
 
-example (h : Injective f) : f ⁻¹' (f '' s) ⊆ s := by
-  sorry
 
-example : f '' (f ⁻¹' u) ⊆ u := by
-  sorry
+example (h : Injective f) : f ⁻¹' (f '' s) ⊆ s :=
+  fun _ ⟨_, hs, hy⟩ ↦ mem_of_eq_of_mem (h hy.symm) hs
+
+example : f '' (f ⁻¹' u) ⊆ u :=
+  fun _ ⟨_, hs, hx⟩ ↦ mem_of_eq_of_mem hx.symm hs
 
 example (h : Surjective f) : u ⊆ f '' (f ⁻¹' u) := by
-  sorry
+  intro y hy
+  obtain ⟨x, hx⟩ := h y
+  use x
+  simp
+  exact ⟨mem_of_eq_of_mem hx hy, hx⟩
 
-example (h : s ⊆ t) : f '' s ⊆ f '' t := by
-  sorry
+example (h : s ⊆ t) : f '' s ⊆ f '' t :=
+  fun _ ⟨x, hs, hx⟩ ↦ ⟨x, (h hs), hx⟩
 
-example (h : u ⊆ v) : f ⁻¹' u ⊆ f ⁻¹' v := by
-  sorry
+example (h : u ⊆ v) : f ⁻¹' u ⊆ f ⁻¹' v :=
+  fun _ hx ↦ h hx
 
 example : f ⁻¹' (u ∪ v) = f ⁻¹' u ∪ f ⁻¹' v := by
-  sorry
+  ext
+  simp
 
-example : f '' (s ∩ t) ⊆ f '' s ∩ f '' t := by
-  sorry
+example : f '' (s ∩ t) ⊆ f '' s ∩ f '' t :=
+  fun _ ⟨x, hst, hx⟩ ↦ ⟨⟨x, hst.1, hx⟩, ⟨x, hst.2, hx⟩⟩
 
 example (h : Injective f) : f '' s ∩ f '' t ⊆ f '' (s ∩ t) := by
-  sorry
+  rintro _ ⟨⟨x, hs, hx⟩, ⟨z, ht, rfl⟩⟩
+  have : x = z := h hx
+  subst z
+  use x, ⟨hs, ht⟩
 
 example : f '' s \ f '' t ⊆ f '' (s \ t) := by
-  sorry
+  rintro _ ⟨⟨x, hs, hx⟩, ht⟩
+  use x
+  simp
+  exact ⟨⟨hs, fun h ↦ ht ⟨x, h, hx⟩⟩, hx⟩
 
 example : f ⁻¹' u \ f ⁻¹' v ⊆ f ⁻¹' (u \ v) := by
-  sorry
+  rintro _ h
+  simp; exact h
 
 example : f '' s ∩ v = f '' (s ∩ f ⁻¹' v) := by
-  sorry
+  ext y
+  simp
+  constructor
+  rintro ⟨⟨x, hs, hy⟩, hx⟩
+  use x, ⟨hs, mem_of_eq_of_mem hy hx⟩
+  rintro ⟨x, ⟨⟨hs, hy⟩, hx⟩⟩
+  exact ⟨⟨x, hs, hx⟩, mem_of_eq_of_mem hx.symm hy⟩
 
 example : f '' (s ∩ f ⁻¹' u) ⊆ f '' s ∩ u := by
-  sorry
+  rintro y ⟨x, ⟨hs, hu⟩, rfl⟩
+  exact ⟨mem_image_of_mem f hs, hu⟩
 
 example : s ∩ f ⁻¹' u ⊆ f ⁻¹' (f '' s ∩ u) := by
-  sorry
+  intro x ⟨hs, hu⟩
+  simp
+  constructor
+  use x
+  exact hu
 
 example : s ∪ f ⁻¹' u ⊆ f ⁻¹' (f '' s ∪ u) := by
-  sorry
+  intro x
+  simp
+  rintro (h | h)
+  left; use x
+  right; exact h
 
 variable {I : Type*} (A : I → Set α) (B : I → Set β)
 
@@ -97,7 +133,7 @@ example : (f '' ⋂ i, A i) ⊆ ⋂ i, f '' A i := by
 example (i : I) (injf : Injective f) : (⋂ i, f '' A i) ⊆ f '' ⋂ i, A i := by
   intro y; simp
   intro h
-  rcases h i with ⟨x, xAi, fxeq⟩
+  rcases h i with ⟨x, _, fxeq⟩
   use x; constructor
   · intro i'
     rcases h i' with ⟨x', x'Ai, fx'eq⟩
@@ -142,17 +178,37 @@ example : range exp = { y | y > 0 } := by
   use log y
   rw [exp_log ypos]
 
+
 example : InjOn sqrt { x | x ≥ 0 } := by
-  sorry
+  intro x hx y hy hxy
+  calc x
+    _ = (sqrt x) ^ 2 := by rw [sq_sqrt hx]
+    _ = (sqrt y) ^ 2 := by rw [hxy]
+    _ = y := by rw [sq_sqrt hy]
 
 example : InjOn (fun x ↦ x ^ 2) { x : ℝ | x ≥ 0 } := by
-  sorry
+  intro x hx y hy hxy
+  simp at hxy
+  calc x
+    _ = sqrt (x ^ 2) := by rw [sqrt_sq hx]
+    _ = sqrt (y ^ 2) := by rw [hxy]
+    _ = y := by rw [sqrt_sq hy]
 
 example : sqrt '' { x | x ≥ 0 } = { y | y ≥ 0 } := by
-  sorry
+  ext y
+  simp
+  constructor
+  rintro ⟨x, _, rfl⟩
+  exact sqrt_nonneg x
+  exact fun h ↦ ⟨y ^ 2, sq_nonneg y, sqrt_sq h⟩
 
 example : (range fun x ↦ x ^ 2) = { y : ℝ | y ≥ 0 } := by
-  sorry
+  ext y
+  simp
+  constructor
+  rintro ⟨x, rfl⟩
+  exact sq_nonneg x
+  exact fun h ↦ ⟨sqrt y, sq_sqrt h⟩
 
 end
 
@@ -184,10 +240,11 @@ variable (f : α → β)
 open Function
 
 example : Injective f ↔ LeftInverse (inverse f) f :=
-  sorry
+  ⟨fun h x ↦ h (inverse_spec (f x) ⟨x, by rfl⟩),
+   fun h x y hxy ↦ by rw [← h x, ← h y, hxy]⟩
 
 example : Surjective f ↔ RightInverse (inverse f) f :=
-  sorry
+  ⟨fun h y ↦ inverse_spec y (h y), fun h y ↦ ⟨(inverse f) y, h y⟩⟩
 
 end
 
@@ -203,10 +260,10 @@ theorem Cantor : ∀ f : α → Set α, ¬Surjective f := by
     intro h'
     have : j ∉ f j := by rwa [h] at h'
     contradiction
-  have h₂ : j ∈ S
-  sorry
-  have h₃ : j ∉ S
-  sorry
+  have h₂ : j ∈ S := h₁
+  have h₃ : j ∉ S := by
+    rw [← h]
+    exact h₁
   contradiction
 
 -- COMMENTS: TODO: improve this

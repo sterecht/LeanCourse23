@@ -53,13 +53,26 @@ theorem neg_add_cancel_left (a b : R) : -a + (a + b) = b := by
 
 -- Prove these:
 theorem add_neg_cancel_right (a b : R) : a + b + -b = a := by
-  sorry
+  rw [add_assoc, add_right_neg, add_zero]
 
 theorem add_left_cancel {a b c : R} (h : a + b = a + c) : b = c := by
-  sorry
+  calc b
+    _ = 0 + b        := by rw [self_eq_add_left]
+    _ = (-a + a) + b := by rw [← add_left_neg]
+    _ = -a + (a + b) := by rw [add_assoc]
+    _ = -a + (a + c) := by rw [h]
+    _ = (-a + a) + c := by rw [← add_assoc]
+    _ = 0 + c        := by rw [add_left_neg]
+    _ = c            := by rw [zero_add]
+
+
 
 theorem add_right_cancel {a b c : R} (h : a + b = c + b) : a = c := by
-  sorry
+  calc a
+    _ = a + 0      := by rw [self_eq_add_right]
+    _ = a + b + -b := by rw [← add_right_neg, ← add_assoc]
+    _ = c + b + -b := by rw [h]
+    _ = c          := by rw [add_assoc, add_right_neg, add_zero]
 
 theorem mul_zero (a : R) : a * 0 = 0 := by
   have h : a * 0 + a * 0 = a * 0 + 0 := by
@@ -67,20 +80,40 @@ theorem mul_zero (a : R) : a * 0 = 0 := by
   rw [add_left_cancel h]
 
 theorem zero_mul (a : R) : 0 * a = 0 := by
-  sorry
+  have h : 0 * a + 0 * a = 0 + 0 * a := by
+    rw [← add_mul, add_zero, zero_add]
+  exact add_right_cancel h
 
 theorem neg_eq_of_add_eq_zero {a b : R} (h : a + b = 0) : -a = b := by
-  sorry
+  have ha : b = -a := by
+    calc b
+      _ = b + 0        := by rw [self_eq_add_right]
+      _ = b + (a + -a) := by rw [← add_right_neg]
+      _ = (b + a) + -a := by rw [add_assoc]
+      _ = (a + b) + -a := by rw [add_comm b a]
+      _ = 0 + -a       := by rw [h]
+      _ = -a           := by rw [zero_add]
+  rw [ha]
 
 theorem eq_neg_of_add_eq_zero {a b : R} (h : a + b = 0) : a = -b := by
-  sorry
+  calc a
+    _ = a + 0        := by rw [self_eq_add_right]
+    _ = a + (b + -b) := by rw [← add_right_neg]
+    _ = (a + b) + -b := by rw [add_assoc]
+    _ = 0 + -b       := by rw [h]
+    _ = -b           := by rw [zero_add]
 
 theorem neg_zero : (-0 : R) = 0 := by
   apply neg_eq_of_add_eq_zero
   rw [add_zero]
 
 theorem neg_neg (a : R) : - -a = a := by
-  sorry
+  calc - -a
+    _ = - -a + 0        := by rw [self_eq_add_right]
+    _ = - -a + (-a + a) := by rw [← add_left_neg]
+    _ = - -a + -a + a   := by rw [add_assoc]
+    _ = 0 + a           := by rw [add_left_neg]
+    _ = a               := by rw [zero_add]
 
 end MyRing
 
@@ -103,13 +136,13 @@ namespace MyRing
 variable {R : Type*} [Ring R]
 
 theorem self_sub (a : R) : a - a = 0 := by
-  sorry
+  rw [sub_eq_add_neg, add_right_neg]
 
 theorem one_add_one_eq_two : 1 + 1 = (2 : R) := by
   norm_num
 
 theorem two_mul (a : R) : 2 * a = a + a := by
-  sorry
+  rw [← one_add_one_eq_two, add_mul, one_mul]
 
 end MyRing
 
@@ -132,13 +165,33 @@ variable {G : Type*} [Group G]
 namespace MyGroup
 
 theorem mul_right_inv (a : G) : a * a⁻¹ = 1 := by
-  sorry
+  calc a * a⁻¹
+    _ = 1 * (a * a⁻¹) := by rw [one_mul]
+    _ = a⁻¹⁻¹ * a⁻¹ * (a * a⁻¹) := by rw [← mul_left_inv]
+    _ = a⁻¹⁻¹ * (a⁻¹ * a) * a⁻¹ := by rw [← mul_assoc, mul_assoc a⁻¹⁻¹]
+    _ = a⁻¹⁻¹ * 1 * a⁻¹ := by rw [mul_left_inv]
+    _ = a⁻¹⁻¹ * a⁻¹ := by rw [mul_assoc, one_mul]
+    _ = 1 := by rw [mul_left_inv]
 
 theorem mul_one (a : G) : a * 1 = a := by
-  sorry
+  calc a * 1
+    _ = a * (a⁻¹ * a) := by rw [← mul_left_inv]
+    _ = a * a⁻¹ * a   := by rw [mul_assoc]
+    _ = 1 * a         := by rw [mul_right_inv]
+    _ = a             := by rw [one_mul]
 
 theorem mul_inv_rev (a b : G) : (a * b)⁻¹ = b⁻¹ * a⁻¹ := by
-  sorry
+  calc (a * b)⁻¹
+    _ = (a * b)⁻¹ * 1 := by rw [mul_one]
+    _ = (a * b)⁻¹ * (a * a⁻¹) := by rw [mul_right_inv]
+    _ = (a * b)⁻¹ * a * a⁻¹ := by rw [mul_assoc]
+    _ = (a * b)⁻¹ * (a * 1) * a⁻¹ := by rw [mul_one]
+    _ = (a * b)⁻¹ * a * 1 * a⁻¹ := by rw [← mul_assoc]
+    _ = (a * b)⁻¹ * a * (b * b⁻¹) * a⁻¹ := by rw [mul_right_inv]
+    _ = (a * b)⁻¹ * a * b * b⁻¹ * a⁻¹ := by rw [← mul_assoc]
+    _ = (a * b)⁻¹ * (a * b) * b⁻¹ * a⁻¹ := by rw [mul_assoc _ a b]
+    _ = 1 * b⁻¹ * a⁻¹ := by rw [mul_left_inv]
+    _ = b⁻¹ * a⁻¹ := by rw [one_mul]
 
 end MyGroup
 

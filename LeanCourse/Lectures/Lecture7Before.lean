@@ -96,16 +96,39 @@ def fib : ℕ → ℕ
 
 /- ## Exercises -/
 
-example : ∑ i in range n, fib (2 * i + 1) = fib (2 * n) := by sorry
+example : ∑ i in range n, fib (2 * i + 1) = fib (2 * n) := by
+  induction' n with k h
+  simp
+  rw [Finset.sum_range_succ, h, mul_add]
+  simp
+  rw [fib, add_comm]
 
-example : (∑ i in range n, fib i : ℤ) = fib (n + 1) - 1 := by sorry
+example : (∑ i in range n, fib i : ℤ) = fib (n + 1) - 1 := by
+  induction n
+  case zero => simp
+  case succ k ih =>
+    rw [sum_range_succ, ih, fib]
+    push_cast
+    ring
 
-example : 6 * ∑ i in range (n + 1), i ^ 2 = n * (n + 1) * (2 * n + 1) := by sorry
+example : 6 * ∑ i in range (n + 1), i ^ 2 = n * (n + 1) * (2 * n + 1) := by
+  induction' n with k h
+  simp
+  rw [sum_range_succ, mul_add, h]
+  ring
 
-example : (∑ i in range (n + 1), i ^ 3 : ℚ) = (n * (n + 1) / 2 : ℚ) ^ 2 := by sorry
+example : (∑ i in range (n + 1), i ^ 3 : ℚ) = (n * (n + 1) / 2 : ℚ) ^ 2 := by
+  induction' n with k h
+  simp
+  rw [sum_range_succ, h]
+  push_cast
+  ring
 
-example (n : ℕ) : fac (2 * n) = fac n * 2 ^ n * ∏ i in range n, (2 * i + 1) := by sorry
-
+example (n : ℕ) : fac (2 * n) = fac n * 2 ^ n * ∏ i in range n, (2 * i + 1) := by
+  induction' n with k h
+  simp
+  rw [mul_add, fac, fac, fac, h, prod_range_succ, pow_succ]
+  ring
 
 
 

@@ -122,21 +122,38 @@ example {α : Type*} [PartialOrder α]
 
 /- Exercises -/
 
-example {p : ℝ → Prop} (h : ∀ x, p x) : ∃ x, p x := by sorry
+example {p : ℝ → Prop} (h : ∀ x, p x) : ∃ x, p x := by
+  use 0
+  exact h 0
 
 
 example {α : Type*} {p q : α → Prop} (h : ∀ x, p x → q x) :
-    (∃ x, p x) → (∃ x, q x) := by sorry
+    (∃ x, p x) → (∃ x, q x) := by
+  intro hp
+  obtain ⟨x, hx⟩ := hp
+  use x
+  exact h x hx
 
 
 example {α : Type*} {p : α → Prop} {r : Prop} :
-    ((∃ x, p x) → r) ↔ (∀ x, p x → r) := by sorry
+    ((∃ x, p x) → r) ↔ (∀ x, p x → r) := by
+  constructor
+  intro h x hp
+  exact h ⟨x, hp⟩
+  intro h hp
+  obtain ⟨x, hx⟩ := hp
+  exact h x hx
 
 
 example {α : Type*} {p : α → Prop} {r : Prop} :
-    (∃ x, p x ∧ r) ↔ ((∃ x, p x) ∧ r) := by sorry
-
-
+    (∃ x, p x ∧ r) ↔ ((∃ x, p x) ∧ r) := by
+  constructor
+  · intro h
+    obtain ⟨x, hx⟩ := h
+    exact ⟨⟨x, hx.1⟩, hx.2⟩
+  · intro h
+    obtain ⟨x, hx⟩ := h.1
+    exact ⟨x, hx, h.2⟩
 
 
 /- ## Disjunctions -/

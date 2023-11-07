@@ -120,8 +120,8 @@ instance instCommRing : CommRing gaussInt where
   mul_comm := by
     intros
     ext <;> simp <;> ring
-  zero_mul := sorry
-  mul_zero := sorry
+  zero_mul := by intro; ext <;> simp
+  mul_zero := by intro; ext <;> simp
 
 @[simp]
 theorem sub_re (x y : gaussInt) : (x - y).re = x.re - y.re :=
@@ -173,9 +173,28 @@ theorem mod'_eq (a b : ℤ) : mod' a b = a - b * div' a b := by linarith [div'_a
 
 end Int
 
+
+
 theorem sq_add_sq_eq_zero {α : Type*} [LinearOrderedRing α] (x y : α) :
     x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 := by
-  sorry
+  constructor
+  · intro h
+    by_contra H
+    push_neg at H
+    wlog hx : x ≠ 0 generalizing x y
+    · have x0 : x = 0 := by by_contra h1; exact hx h1
+      exact this y x (by rw [add_comm]; exact h) (by revert H; tauto) (H x0)
+    have : x ^ 2 + y ^ 2 > 0 := by
+      calc x ^ 2 + y ^ 2
+        _ ≥ x ^ 2 + 0 := add_le_add_left (sq_nonneg y) (x ^ 2)
+        _ = x ^ 2 := add_zero (x ^ 2)
+        _ > 0 := sq_pos_of_ne_zero x hx
+    rw [h] at this
+    exact (lt_self_iff_false 0).1 this
+  · intro ⟨hx, hy⟩
+    subst hx
+    subst hy
+    simp
 namespace gaussInt
 
 def norm (x : gaussInt) :=
@@ -183,13 +202,32 @@ def norm (x : gaussInt) :=
 
 @[simp]
 theorem norm_nonneg (x : gaussInt) : 0 ≤ norm x := by
-  sorry
+  calc (0 : ℤ)
+    _ = 0 + 0 := by ring
+    _ ≤ x.re ^ 2 + 0 := add_le_add_right (sq_nonneg x.re) 0
+    _ ≤ x.re ^ 2 + x.im ^ 2 := add_le_add_left (sq_nonneg x.im) (x.re ^ 2)
+    _ = norm x := rfl
+
 theorem norm_eq_zero (x : gaussInt) : norm x = 0 ↔ x = 0 := by
-  sorry
+  constructor
+  intro h
+  rw [norm, sq_add_sq_eq_zero] at h
+  ext <;> simp
+  exact h.1
+  exact h.2
+  intro h
+  subst x
+  simp
+
 theorem norm_pos (x : gaussInt) : 0 < norm x ↔ x ≠ 0 := by
-  sorry
+  constructor <;> contrapose! <;> intro h
+  rw [(norm_eq_zero x).2 h]
+  exact (norm_eq_zero x).1 (le_antisymm h (norm_nonneg x))
+
 theorem norm_mul (x y : gaussInt) : norm (x * y) = norm x * norm y := by
-  sorry
+  rw [norm, norm, norm, mul_re, mul_im]
+  ring
+
 def conj (x : gaussInt) : gaussInt :=
   ⟨x.re, -x.im⟩
 

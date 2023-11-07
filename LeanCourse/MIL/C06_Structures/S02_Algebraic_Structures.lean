@@ -48,14 +48,20 @@ def permGroup {α : Type*} : Group₁ (Equiv.Perm α)
   mul f g := Equiv.trans g f
   one := Equiv.refl α
   inv := Equiv.symm
-  mul_assoc f g h := (Equiv.trans_assoc _ _ _).symm
+  mul_assoc _ _ _ := (Equiv.trans_assoc _ _ _).symm
   one_mul := Equiv.trans_refl
   mul_one := Equiv.refl_trans
   mul_left_inv := Equiv.self_trans_symm
 
 structure AddGroup₁ (α : Type*) where
-  (add : α → α → α)
-  -- fill in the rest
+  add : α → α → α
+  zero : α
+  neg : α → α
+  add_assoc : ∀ x y z : α , add (add x y) z = add x (add y z)
+  add_zero : ∀ x : α , add x zero = x
+  zero_add : ∀ x : α , add zero x = x
+  add_left_inv : ∀ x : α , add (neg x) x = zero
+
 @[ext]
 structure Point where
   x : ℝ
@@ -67,11 +73,18 @@ namespace Point
 def add (a b : Point) : Point :=
   ⟨a.x + b.x, a.y + b.y, a.z + b.z⟩
 
-def neg (a : Point) : Point := sorry
+def neg (a : Point) : Point := ⟨-a.x, -a.y, -a.z⟩
 
-def zero : Point := sorry
+def zero : Point := ⟨0,0,0⟩
 
-def addGroupPoint : AddGroup₁ Point := sorry
+def addGroupPoint : AddGroup₁ Point where
+  add := add
+  zero := zero
+  neg := neg
+  add_assoc := by intro x y z; ext <;> simp[add, add_assoc]
+  add_zero := by intro x; ext <;> simp[add, add_zero, zero]
+  zero_add := by intro x; ext <;> simp[add, zero_add, zero]
+  add_left_inv := by intro x; ext <;> simp[add, neg, zero]
 
 end Point
 
@@ -107,7 +120,7 @@ instance {α : Type*} : Group₂ (Equiv.Perm α) where
   mul f g := Equiv.trans g f
   one := Equiv.refl α
   inv := Equiv.symm
-  mul_assoc f g h := (Equiv.trans_assoc _ _ _).symm
+  mul_assoc _ _ _ := (Equiv.trans_assoc _ _ _).symm
   one_mul := Equiv.trans_refl
   mul_one := Equiv.refl_trans
   mul_left_inv := Equiv.self_trans_symm
@@ -170,4 +183,9 @@ end
 
 class AddGroup₂ (α : Type*) where
   add : α → α → α
-  -- fill in the rest
+  zero : α
+  neg : α → α
+  add_assoc : ∀ x y z : α , add (add x y) z = add x (add y z)
+  add_zero : ∀ x : α , add x zero = x
+  zero_add : ∀ x : α , add zero x = x
+  add_left_inv : ∀ x : α , add (neg x) x = zero

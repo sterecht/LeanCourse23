@@ -5,6 +5,18 @@ import LeanCourse.Common
 open Set
 open Function
 
+
+
+example {α : Type*} {p q : Set α} {x : α} : x ∈ p ∪ q → x∈ p ∨ x ∈ q := by
+  intro h
+  wlog hp : x ∈ p generalizing x p q
+  · have hqp : x ∈ q ∪ p := by
+      rw [union_comm]
+      exact h
+    exact (this hqp (h.resolve_left hp)).symm
+  left
+  exact hp
+
 noncomputable section
 open Classical
 variable {α β : Type*} [Nonempty β]
@@ -28,10 +40,11 @@ theorem sb_right_inv {x : α} (hx : x ∉ sbSet f g) : g (invFun g x) = x := by
     rw [sbSet, mem_iUnion]
     use 0
     rw [sbAux, mem_diff]
-    sorry
+    exact ⟨by simp, hx⟩
   have : ∃ y, g y = x := by
-    sorry
-  sorry
+    simp at this
+    exact this
+  exact invFun_eq this
 
 theorem sb_injective (hf : Injective f) (hg : Injective g) : Injective (sbFun f g) := by
   set A := sbSet f g with A_def
@@ -50,15 +63,17 @@ theorem sb_injective (hf : Injective f) (hg : Injective g) : Injective (sbFun f 
       rw [if_pos x₁A, if_neg x₂nA] at hxeq
       rw [A_def, sbSet, mem_iUnion] at x₁A
       have x₂eq : x₂ = g (f x₁) := by
-        sorry
+        rw [hxeq, sb_right_inv f g x₂nA]
       rcases x₁A with ⟨n, hn⟩
       rw [A_def, sbSet, mem_iUnion]
       use n + 1
       simp [sbAux]
       exact ⟨x₁, hn, x₂eq.symm⟩
-    sorry
+    simp [x₁A, x₂A] at hxeq
+    exact hf hxeq
   push_neg  at xA
-  sorry
+  simp [xA] at hxeq
+  rw [← sb_right_inv f g xA.1, ← sb_right_inv f g xA.2, hxeq]
 
 theorem sb_surjective (hf : Injective f) (hg : Injective g) : Surjective (sbFun f g) := by
   set A := sbSet f g with A_def
@@ -77,7 +92,9 @@ theorem sb_surjective (hf : Injective f) (hg : Injective g) : Surjective (sbFun 
       exact ⟨n, xmem⟩
     simp only [h_def, sbFun, if_pos this]
     exact hg hx
-  sorry
+  use g y
+  rw [h_def, sbFun, if_neg gyA]
+  exact leftInverse_invFun hg y
 
 end
 

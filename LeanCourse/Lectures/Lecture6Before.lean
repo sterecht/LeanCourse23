@@ -157,15 +157,50 @@ example : ({1, 3, 5} : Set ℝ) + {0, 10} = {1, 3, 5, 11, 13, 15} := by sorry
 
 /- # Exercises for the break. -/
 
-example {f : β → α} : f '' (f ⁻¹' s) ⊆ s := by sorry
+example {f : β → α} : f '' (f ⁻¹' s) ⊆ s := by
+  rintro y ⟨x, hx, rfl⟩
+  simp at hx
+  exact hx
 
-example {f : β → α} (h : Surjective f) : s ⊆ f '' (f ⁻¹' s) := by sorry
 
-example {f : α → β} (h : Injective f) : f '' s ∩ f '' t ⊆ f '' (s ∩ t) := by sorry
+example {f : β → α} (h : Surjective f) : s ⊆ f '' (f ⁻¹' s) := by
+  intro x hx
+  obtain ⟨y, hy⟩ := h x
+  use y
+  constructor
+  subst x
+  simp
+  exact hx
+  exact hy
 
-example {I : Type*} (f : α → β) (A : I → Set α) : (f '' ⋃ i, A i) = ⋃ i, f '' A i := by sorry
+example {f : α → β} (h : Injective f) : f '' s ∩ f '' t ⊆ f '' (s ∩ t) := by
+  intro y
+  simp
+  intro x hx hxy x₂ hx₂ hx₂y
+  rw [← hx₂y] at hxy
+  have : x = x₂ := h hxy
+  use x
+  subst x₂
+  exact ⟨⟨hx, hx₂⟩, hx₂y⟩
 
-example : (fun x : ℝ ↦ x ^ 2) '' univ = { y : ℝ | y ≥ 0 } := by sorry
+
+example {I : Type*} (f : α → β) (A : I → Set α) : (f '' ⋃ i, A i) = ⋃ i, f '' A i := by
+  ext; simp
+  constructor
+  rintro ⟨x, ⟨i, hi⟩, hx⟩
+  exact ⟨i, x, hi, hx⟩
+  rintro ⟨i, ⟨x, hi, hx⟩⟩
+  exact ⟨x, ⟨i, hi⟩, hx⟩
+
+
+example : (fun x : ℝ ↦ x ^ 2) '' univ = { y : ℝ | y ≥ 0 } := by
+  ext x; simp
+  constructor
+  rintro ⟨y, rfl⟩
+  exact sq_nonneg y
+  intro h
+  use sqrt x
+  exact sq_sqrt h
 
 
 /-

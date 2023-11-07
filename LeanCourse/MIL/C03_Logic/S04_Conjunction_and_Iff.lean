@@ -64,7 +64,7 @@ example {x y : ℝ} (h : x ≤ y ∧ x ≠ y) : ¬y ≤ x :=
   fun h' ↦ h.right (le_antisymm h.left h')
 
 example {m n : ℕ} (h : m ∣ n ∧ m ≠ n) : m ∣ n ∧ ¬n ∣ m :=
-  sorry
+  ⟨h.1, fun h' ↦ h.2 (Nat.dvd_antisymm h.1 h')⟩
 
 example : ∃ x : ℝ, 2 < x ∧ x < 4 :=
   ⟨5 / 2, by norm_num, by norm_num⟩
@@ -74,7 +74,7 @@ example (x y : ℝ) : (∃ z : ℝ, x < z ∧ z < y) → x < y := by
   exact lt_trans xltz zlty
 
 example (x y : ℝ) : (∃ z : ℝ, x < z ∧ z < y) → x < y :=
-  fun ⟨z, xltz, zlty⟩ ↦ lt_trans xltz zlty
+  fun ⟨_, xltz, zlty⟩ ↦ lt_trans xltz zlty
 
 example : ∃ x : ℝ, 2 < x ∧ x < 4 := by
   use 5 / 2
@@ -102,14 +102,31 @@ example {x y : ℝ} (h : x ≤ y) : ¬y ≤ x ↔ x ≠ y :=
   ⟨fun h₀ h₁ ↦ h₀ (by rw [h₁]), fun h₀ h₁ ↦ h₀ (le_antisymm h h₁)⟩
 
 example {x y : ℝ} : x ≤ y ∧ ¬y ≤ x ↔ x ≤ y ∧ x ≠ y :=
-  sorry
+  ⟨fun ⟨h1, h2⟩ ↦ ⟨h1, fun h ↦ h2 (le_of_eq (symm h))⟩,
+   fun ⟨h1, h2⟩ ↦ ⟨h1, fun h ↦ h2 (le_antisymm h1 h)⟩⟩
 
 theorem aux {x y : ℝ} (h : x ^ 2 + y ^ 2 = 0) : x = 0 :=
-  have h' : x ^ 2 = 0 := by sorry
+  have h' : x ^ 2 = 0 := by
+    have : x ^ 2 ≤ 0 := by
+      calc x ^ 2
+        _ = x ^ 2 + y ^ 2 - y ^ 2 := by ring
+        _ = 0 - y ^ 2 := by rw [h]
+        _ = -1 * y ^ 2 := by ring
+        _ ≤ -1 * 0 := mul_le_mul_of_nonpos_left (pow_two_nonneg y) (by norm_num)
+        _ = 0 := by ring
+    exact le_antisymm this (pow_two_nonneg x)
   pow_eq_zero h'
 
-example (x y : ℝ) : x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 :=
-  sorry
+example (x y : ℝ) : x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 := by
+  constructor
+  intro h
+  constructor
+  exact aux h
+  rw [add_comm] at h
+  exact aux h
+  intro ⟨h0, h1⟩
+  rw [h0, h1]
+  ring
 
 section
 
@@ -130,7 +147,10 @@ theorem not_monotone_iff {f : ℝ → ℝ} : ¬Monotone f ↔ ∃ x y, x ≤ y �
   rfl
 
 example : ¬Monotone fun x : ℝ ↦ -x := by
-  sorry
+  apply not_monotone_iff.2
+  use 0
+  use 1 ; norm_num
+
 
 section
 variable {α : Type*} [PartialOrder α]
@@ -138,7 +158,8 @@ variable (a b : α)
 
 example : a < b ↔ a ≤ b ∧ a ≠ b := by
   rw [lt_iff_le_not_le]
-  sorry
+  exact ⟨fun ⟨h1, h2⟩ ↦ ⟨h1, fun h ↦ h2 (le_of_eq (symm h))⟩,
+   fun ⟨h1, h2⟩ ↦ ⟨h1, fun h ↦ h2 (le_antisymm h1 h)⟩⟩
 
 end
 
@@ -148,10 +169,11 @@ variable (a b c : α)
 
 example : ¬a < a := by
   rw [lt_iff_le_not_le]
-  sorry
+  exact fun h ↦ h.2 h.1
+
 
 example : a < b → b < c → a < c := by
   simp only [lt_iff_le_not_le]
-  sorry
+  exact fun h1 h2 ↦ ⟨le_trans h1.1 h2.1, fun h ↦ h1.2 (le_trans h2.1 h)⟩
 
 end
