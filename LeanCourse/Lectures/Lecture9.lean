@@ -5,7 +5,7 @@ noncomputable section
 set_option linter.unusedVariables false
 local macro_rules | `($x ^ $y) => `(HPow.hPow $x $y)
 
-
+-- (not much changed compared to the "before" version)
 
 /- Practical:
 * **I have updated the version of mathlib for this repository**. Rerun `lake exe cache get!`.
@@ -15,7 +15,7 @@ local macro_rules | `($x ^ $y) => `(HPow.hPow $x $y)
   how this is done in Lean.
   - Group theory: group homomorphisms, subgroups, quotient groups, group actions
   - Ring theory: ideals, units, polynomials
-  - Topology: Metric spaces, Hausdorff spaces, compact sets
+  - Topology: Topological spaces, metric spaces, Hausdorff spaces, compact sets
   - Calculus: total derivative of a multivariate function
   - Integration: measures
 -/
@@ -26,6 +26,7 @@ We cover section 8.1 from Mathematics in Lean.
 
 Chapter 7 covers some of the design decisions for algebraic structures.
 I recommend that you read through it, but I won't cover it in detail in class. -/
+
 
 /-
 Last time we discussed structures and classes
@@ -40,6 +41,8 @@ of another type. We've already seen the coercions
 `ℕ → ℤ → ℚ → ℝ → ℂ`
 for numbers.
 -/
+
+#check fun n : ℕ ↦ (n : ℚ)
 
 def PosReal : Type := {x : ℝ // x > 0}
 
@@ -112,8 +115,7 @@ The type of morphisms between monoids `M` and `N` is called `MonoidHom M N` and 
 They both have a coercion to functions.
 -/
 
-example {M N : Type*} [Monoid M] [Monoid N] (x y : M) (f : M →* N) : f (x * y) = f x * f y :=
-  f.map_mul x y
+example {M N : Type*} [Monoid M] [Monoid N] (x y : M) (f : M →* N) : f (x * y) = f x * f y := by exact f.map_mul x y
 
 example {M N : Type*} [AddMonoid M] [AddMonoid N] (f : M →+ N) : f 0 = 0 :=
   f.map_zero
@@ -169,8 +171,7 @@ This type is automatically coerced to morphisms and functions.
 -/
 
 example {G H : Type*} [Group G] [Group H] (f : G ≃* H) :
-    f.trans f.symm = MulEquiv.refl G :=
-  f.self_trans_symm
+    f.trans f.symm = MulEquiv.refl G := by exact?
 
 
 
@@ -223,7 +224,7 @@ have the lattice operation `⊓` and all lemmas about lattices are readily avail
 example {G : Type*} [Group G] : CompleteLattice (Subgroup G) := by infer_instance
 
 example {G : Type*} [Group G] (H H' : Subgroup G) :
-    ((H ⊓ H' : Subgroup G) : Set G) = (H : Set G) ∩ (H' : Set G) := rfl
+    ((H ⊓ H' : Subgroup G) : Set G) = (H : Set G) ∩ (H' : Set G) := by rfl
 
 example {G : Type*} [Group G] (H H' : Subgroup G) :
     ((H ⊔ H' : Subgroup G) : Set G) = Subgroup.closure ((H : Set G) ∪ (H' : Set G)) := by
