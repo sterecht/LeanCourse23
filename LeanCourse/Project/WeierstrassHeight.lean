@@ -1,14 +1,16 @@
 import LeanCourse.Common
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
 
+set_option maxHeartbeats 500000
 /-
   This file introduces the height of a rational number and the height of a point
   on a Weierstrass curve. We prove two of the three required inequalities of the
   descent theorem for Mordell-Weil. (These don't require the curve to be non-singular).
+  Reference: J Silverman, The Arithmetic of Elliptic Curves, VIII.4
 -/
 
-
 open WeierstrassCurve Nat Int BigOperators
+
 /-
   We assume elliptic curves are in short Weierstraß form
   Y^2 = X^3 + a₄X + a₆ with a₄, a₆ ∈ ℤ.
@@ -26,7 +28,6 @@ example : Point W := 0
   max |p| |q| if gcd p q = 1, or max |p| |q| / gcd p q in general.
   The height of a point on an elliptic curve is the height of its x-coordinate.
 -/
-
 def H : (Point W) → ℕ
   | 0 => 1
   | @Point.some _ _ _ x _ _ => max (natAbs x.num) x.den
@@ -249,7 +250,7 @@ lemma Nat.le_sq {a : ℕ} : a ≤ a ^ 2 := by
   calc a
     _ = a * 1 := (mul_one a).symm
     _ ≤ a * a := Nat.mul_le_mul_left a h
-    _ = a ^ 2 := by exact (Nat.pow_two a).symm
+    _ = a ^ 2 := (Nat.pow_two a).symm
 
 lemma Nat.le_of_sq_le {a b : ℕ} (h : a ^ 2 ≤ b ^ 2) : a ≤ b := by
   by_contra h'
@@ -259,10 +260,10 @@ lemma Nat.le_of_sq_le {a b : ℕ} (h : a ^ 2 ≤ b ^ 2) : a ≤ b := by
 
 lemma Nat.add_le_self {a b : ℕ} (h : a + b ≤ a) : b = 0 := by
   have : a + b ≤ a + 0 := by rw [add_zero]; exact h
-  have : b ≤ 0 := by exact (Nat.add_le_add_iff_left a b 0).mp h
-  exact le_zero.mp this
+  have : b ≤ 0 := (Nat.add_le_add_iff_left a b 0).1 h
+  exact le_zero.1 this
 
-lemma point_den_sq_cb {x y : ℚ} (h : W.equation x y) : ∃ d : ℕ, d ^ 2 = x.den ∧ d^3 = y.den := by
+lemma point_den_sq_cb {x y : ℚ} (h : W.equation x y) : ∃ d : ℕ, d ^ 2 = x.den ∧ d ^ 3 = y.den := by
   unfold WeierstrassCurve.equation at h
   unfold WeierstrassCurve.polynomial at h
   simp[ha₁, ha₂, ha₃] at h
@@ -306,6 +307,30 @@ lemma point_of_eq_x {x₁ y₁ x₂ y₂} (h₁ : W.nonsingular x₁ y₁) (h₂
   · right; subst h; subst hx; rw [Point.neg_some]; simp
     rw [ha₁, ha₃]; simp
 
+lemma WeierstrassCurve.int_equation {x y} (h : W.equation x y) :
+    y.num ^ 2 = x.num ^ 3 + W.a₄.num * x.num * (x.den : ℤ) ^ 2 + W.a₆.num * (y.den : ℤ) ^ 2 := by
+  obtain ⟨d, hx, hy⟩ := point_den_sq_cb ha₁ ha₂ ha₃ ha₄ ha₆ h
+  unfold WeierstrassCurve.equation at h
+  unfold WeierstrassCurve.polynomial at h
+  simp[ha₁, ha₂, ha₃] at h
+  rw [sub_eq_zero] at h
+  rw [← Rat.num_div_den y, ← Rat.num_div_den x, Rat.eq_num_of_isInt ha₄, Rat.eq_num_of_isInt ha₆] at h
+  have h1 : (y.den : ℚ) ^ 2 ≠ 0 := by norm_num; exact y.den_nz
+  have h2 : (x.den : ℚ) ≠ 0 := by norm_num; exact x.den_nz
+  have h3 : (x.den : ℚ) ^ 3 ≠ 0 := by norm_num; exact x.den_nz
+  have h4 : (d : ℤ) ^ 8 ≠ 0 := by
+    norm_num
+    have : d ^ 2 ≠ 0 := by rw [hx]; exact x.den_nz
+    exact right_ne_zero_of_mul this
+  field_simp at h; norm_cast at h; rw [← hx, ← hy]; rw [← hx, ← hy] at h
+  push_cast at h; ring at h
+  rw [mul_comm ((d : ℤ) ^ 8), mul_comm ((d : ℤ) ^ 12), mul_comm ((d : ℤ) ^ 14)] at h
+  have : (d : ℤ) ^ 12 = (d : ℤ) ^ 4 * (d : ℤ) ^ 8 := by ring
+  rw [mul_assoc, mul_comm ((d : ℤ) ^ 12), ← mul_assoc, this, ← mul_assoc, ← add_mul] at h
+  have : (d : ℤ) ^ 14 = (d : ℤ) ^ 6 * (d : ℤ) ^ 8 := by ring
+  rw [this, ← mul_assoc, ← add_mul, Int.mul_eq_mul_right_iff h4] at h
+  push_cast; rw [h]; ring
+
 /-
   The first inequality : ∀ p ∃ C₁ ∀ q : H (p + q) ≤ 2 * H q + C₁
 -/
@@ -323,16 +348,39 @@ lemma Hsum1_xy {x₁ y₁ x₂ y₂ : ℚ} (hx : x₁ ≠ x₂) (h₁ : W.nonsin
   unfold slope
   rw [if_neg hx, ← Rat.num_div_den x₁, ← Rat.num_div_den x₂, ← Rat.num_div_den y₁, ← Rat.num_div_den y₂]
   rw [← hd₁x, ← hd₁y, ← hd₂x, ← hd₂y]
-  have : (((y₁.num : ℚ) / ((d₁ ^ 3 : ℕ) : ℚ) - (y₂.num : ℚ) / ((d₂ ^ 3 : ℕ) : ℚ)) / ((x₁.num : ℚ) / ((d₁ ^ 2 : ℕ) : ℚ) - (x₂.num : ℚ) / ((d₂ ^ 2 : ℕ) : ℚ))) ^ 2 - (x₁.num : ℚ) / ((d₁ ^ 2 : ℕ) : ℚ) - (x₂.num : ℚ) / ((d₂ ^ 2 : ℕ) : ℚ) =
-      ((((x₁.num * x₂.num + W.a₄.num * (d₁ : ℤ) ^ 2 * (d₂ : ℤ) ^ 2) * (x₁.num * (d₂ : ℤ) ^ 2 - x₂.num * (d₁ : ℤ) ^ 2) + (2 : ℤ) * W.a₆.num * (d₁ : ℤ) ^ 4 * (d₂ : ℤ) ^ 4 - (2 : ℤ) * y₁.num * y₂.num * (d₁ : ℤ) * (d₂ : ℤ)) : ℤ) : ℚ) / (((x₁.num * (d₂ : ℤ) ^ 2 - x₂.num * (d₁ : ℤ) ^ 2) ^ 2 : ℤ) : ℚ) := by
-    sorry
-  rw [this]
-  have hn : (x₁.num * (d₂ : ℤ) ^ 2 - x₂.num * (d₁ : ℤ) ^ 2) ^ 2 ≠ 0 := by
+  -- proofs that the denominators that occur in the calculations are not zero
+  -- need to be in context explicitly for simp etc. to work properly
+  have hden1 : (x₁.num * (d₂ : ℤ) ^ 2 - x₂.num * (d₁ : ℤ) ^ 2) ^ 2 ≠ 0 := by
     apply pow_ne_zero 2
     intro h
     rw [sub_eq_zero, ← Nat.cast_pow, ← Nat.cast_pow, hd₁x, hd₂x] at h
     exact hx <| Rat.eq_iff_mul_eq_mul.2 h
-  apply le_trans (Hq_le_frac hn)
+  have hden1₂ : ((x₁.num : ℚ) * (d₂ : ℚ) ^ 2 - (x₂.num : ℚ) * (d₁ : ℚ) ^ 2) ^ 2 ≠ 0 := by
+    norm_num; intro h
+    have : (x₁.num : ℚ) * (d₂ : ℚ) ^ 2 - (x₂.num : ℚ) * (d₁ : ℚ) ^ 2 =
+        (((x₁.num * (d₂ : ℤ) ^ 2 : ℤ) - (x₂.num * (d₁ : ℤ) ^ 2) : ℤ) : ℚ) := by push_cast; rfl
+    have silly : ((0 : ℤ) : ℚ) = (0 : ℚ) := rfl
+    rw [this, ← silly, Rat.coe_int_inj] at h; rw [h] at hden1; simp at hden1
+  have hden2 : (d₁ : ℚ) ^ 2 ≠ 0 := by norm_cast; rw [hd₁x]; exact x₁.den_nz
+  have hden3 : (d₁ : ℚ) ^ 3 ≠ 0 := by norm_cast; rw [hd₁y]; exact y₁.den_nz
+  have hden4 : (d₂ : ℚ) ^ 2 ≠ 0 := by norm_cast; rw [hd₂x]; exact x₂.den_nz
+  have hden5 : (d₂ : ℚ) ^ 3 ≠ 0 := by norm_cast; rw [hd₂y]; exact y₂.den_nz
+  have : ((x₁.num : ℚ) / (d₁ : ℚ) ^ 2 - (x₂.num : ℚ) / (d₂ : ℚ) ^ 2) ^ 2 ≠ 0 := by
+    field_simp; intro h; rw [mul_comm _ ((x₂.num) : ℚ)] at h; rw [h] at hden1₂; simp at hden1₂
+  have hden7 : ((d₁ : ℚ) ^ 3 * (d₂ : ℚ) ^ 3) ^ 2 * ((x₁.num : ℚ) * (d₂ : ℚ) ^ 2 - (d₁ : ℚ) ^ 2 * (x₂.num : ℚ)) ^ 2 ≠ 0 := by
+    rw [mul_comm ((d₁ : ℚ) ^ 2) (x₂.num : ℚ)]
+    exact mul_ne_zero (pow_ne_zero 2 <| mul_ne_zero hden3 hden5) hden1₂
+  have hy₁ : y₁.num ^ 2 = x₁.num ^ 3 + x₁.num * W.a₄.num * (d₁ : ℤ) ^ 4 + W.a₆.num * (d₁ : ℤ) ^ 6 := by
+    rw [WeierstrassCurve.int_equation ha₁ ha₂ ha₃ ha₄ ha₆ h₁.1]
+    rw [← hd₁x, ← hd₁y]; push_cast; ring
+  have hy₂ : y₂.num ^ 2 = x₂.num ^ 3 + x₂.num * W.a₄.num * (d₂ : ℤ) ^ 4 + W.a₆.num * (d₂ : ℤ) ^ 6 := by
+    rw [WeierstrassCurve.int_equation ha₁ ha₂ ha₃ ha₄ ha₆ h₂.1]
+    rw [← hd₂x, ← hd₂y]; push_cast; ring
+  have : (((y₁.num : ℚ) / ((d₁ ^ 3 : ℕ) : ℚ) - (y₂.num : ℚ) / ((d₂ ^ 3 : ℕ) : ℚ)) / ((x₁.num : ℚ) / ((d₁ ^ 2 : ℕ) : ℚ) - (x₂.num : ℚ) / ((d₂ ^ 2 : ℕ) : ℚ))) ^ 2 - (x₁.num : ℚ) / ((d₁ ^ 2 : ℕ) : ℚ) - (x₂.num : ℚ) / ((d₂ ^ 2 : ℕ) : ℚ) =
+      ((((x₁.num * x₂.num + W.a₄.num * (d₁ : ℤ) ^ 2 * (d₂ : ℤ) ^ 2) * (x₁.num * (d₂ : ℤ) ^ 2 + x₂.num * (d₁ : ℤ) ^ 2) + (2 : ℤ) * W.a₆.num * (d₁ : ℤ) ^ 4 * (d₂ : ℤ) ^ 4 - (2 : ℤ) * y₁.num * y₂.num * (d₁ : ℤ) * (d₂ : ℤ)) : ℤ) : ℚ) / (((x₁.num * (d₂ : ℤ) ^ 2 - x₂.num * (d₁ : ℤ) ^ 2) ^ 2 : ℤ) : ℚ) := by
+    norm_num; field_simp; norm_cast; push_cast; ring; rw [hy₁, hy₂]; ring
+  rw [this]
+  apply le_trans (Hq_le_frac hden1)
   rw [hd₁x, hd₂x, hd₁y, Rat.num_div_den, Rat.num_div_den, Rat.num_div_den]
   unfold H_q; unfold H_coord
   rw [if_neg x₂.den_nz, x₂.reduced, Nat.div_one, ← hd₂x, Nat.max_sq]
@@ -340,18 +388,17 @@ lemma Hsum1_xy {x₁ y₁ x₂ y₂ : ℚ} (hx : x₁ ≠ x₂) (h₁ : W.nonsin
   have : d₁ ^ 4 = (d₁ ^ 2) ^ 2 := by rw [← Nat.pow_mul]
   have hd₂ : d₂ ^ 4 = (d₂ ^ 2) ^ 2 := by rw [← Nat.pow_mul]
   apply max_le
-  · trans natAbs (-(x₁.num * x₂.num ^ 2 * (d₁ : ℤ) ^ 2)) + natAbs (x₁.num * W.a₄.num * (d₁ : ℤ) ^ 2 * (d₂ : ℤ) ^ 4) +
+  · trans natAbs (x₁.num * x₂.num ^ 2 * (d₁ : ℤ) ^ 2) + natAbs (x₁.num * W.a₄.num * (d₁ : ℤ) ^ 2 * (d₂ : ℤ) ^ 4) +
       natAbs (x₁.num ^ 2 * x₂.num * (d₂ : ℤ) ^ 2) + natAbs (x₂.num * W.a₄.num * (d₁ : ℤ) ^ 4 * (d₂ : ℤ) ^  2) +
       natAbs ((d₁ : ℤ) * (d₂ : ℤ) * y₁.num * y₂.num * 2) + natAbs ((d₁ : ℤ) ^ 4 * (d₂ : ℤ) ^ 4 * W.a₆.num * 2)
     apply le_trans (natAbs_add_le _ _); apply add_le_add_right
-    apply le_trans (natAbs_add_le _ _); rw [← neg_add', natAbs_neg, add_assoc _ _ (natAbs ((d₁ : ℤ) * (d₂ : ℤ) * y₁.num * y₂.num * 2))]
-    apply Nat.add_le_add
+    rw [← add_sub_assoc]
+    apply le_trans (natAbs_sub_le _ _); apply add_le_add_right
+    apply le_trans (natAbs_add_le _ _); apply add_le_add_right
     apply le_trans (natAbs_add_le _ _); apply add_le_add_right
     apply le_trans (natAbs_add_le _ _); apply add_le_add_right
     exact le_of_eq rfl
-    apply le_trans (natAbs_add_le _ _); apply add_le_add_right
-    exact le_of_eq rfl
-    rw [natAbs_neg]; repeat rw [natAbs_mul]; norm_cast;
+    repeat rw [natAbs_mul]; norm_cast;
     rw [this, hd₁x]
     have hn : natAbs y₂.num * d₂ ≤ (1 + natAbs W.a₄.num + natAbs W.a₆.num) * (max (natAbs x₂.num) (d₂ ^ 2)) ^ 2 := by
       apply Nat.le_of_sq_le; rw [Nat.mul_pow, Nat.mul_pow]; trans (1 + natAbs W.a₄.num + natAbs W.a₆.num) * (max (natAbs x₂.num) (d₂ ^ 2)) ^ 4
@@ -375,9 +422,7 @@ lemma Hsum1_xy {x₁ y₁ x₂ y₂ : ℚ} (hx : x₁ ≠ x₂) (h₁ : W.nonsin
         simp; rw [mul_assoc, mul_div_assoc]; apply congrArg (HMul.hMul W.a₄)
         set t := x₂.num with temp
         rw [← Rat.num_div_den x₂, temp, ← hd₂x]; field_simp
-        rw [mul_div_assoc]; apply congrArg (HMul.hMul _)
-        rw [div_eq_iff]; ring
-        norm_cast; rw [hd₂x]; exact x₂.den_nz
+        ring
       have : natAbs y₂.num ^ 2 ≤ (1 + natAbs W.a₄.num + natAbs W.a₆.num) * max (natAbs x₂.num) (d₂ ^ 2) ^ 3 := by
         rw [← natAbs_pow, this]; apply le_trans (natAbs_add_le _ _)
         apply le_trans (Nat.add_le_add_right (natAbs_add_le _ _) _)
