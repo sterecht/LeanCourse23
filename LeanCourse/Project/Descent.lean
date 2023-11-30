@@ -1,5 +1,9 @@
 import LeanCourse.Common
-
+/-
+  This file contains the descent argument to finish the proof of the
+  Mordell-Weil theorem from the weak version and the theory of heights.
+  Reference: J. Silverman, Arithmetic of Elliptic Curves, VIII.3
+-/
 
 /-
   Subgroups and quotients of the form mA, m ∈ ℕ
@@ -47,7 +51,8 @@ variable {A : Type*} [AddCommGroup A]
   Some inequalities of real numbers for the proof
   These should be in mathlib, but I couldn't find them
 -/
-lemma geo_series (r : ℝ) (n : ℕ) (h : r ≠ 1) : ∑ i in Finset.range n, r ^ i = (1 - r ^ n) / (1 - r) := by
+lemma geo_series (r : ℝ) (n : ℕ) (h : r ≠ 1) :
+    ∑ i in Finset.range n, r ^ i = (1 - r ^ n) / (1 - r) := by
   induction' n with n hn
   · simp
   rw [Finset.sum_range_succ, hn]
@@ -55,7 +60,8 @@ lemma geo_series (r : ℝ) (n : ℕ) (h : r ≠ 1) : ∑ i in Finset.range n, r 
   rw [mul_div_cancel' _ (sub_ne_zero.2 h.symm), mul_add, mul_div_cancel' _ (sub_ne_zero.2 h.symm)]
   ring
 
-lemma geo_series_le_lim (r : ℝ) (n : ℕ) (h0 : 0 ≤ r) (h1 : r < 1) : ∑ i in Finset.range n, r ^ i ≤ 1 / (1 - r) := by
+lemma geo_series_le_lim (r : ℝ) (n : ℕ) (h0 : 0 ≤ r) (h1 : r < 1) :
+    ∑ i in Finset.range n, r ^ i ≤ 1 / (1 - r) := by
   rw [geo_series r n (ne_of_lt h1)]
   have : 1 - r > 0 := by linarith
   apply (div_le_div_right this).2
@@ -63,13 +69,13 @@ lemma geo_series_le_lim (r : ℝ) (n : ℕ) (h0 : 0 ≤ r) (h1 : r < 1) : ∑ i 
   exact pow_nonneg h0 n
 
 /-
-  sections of surjective functions
+  right inverse of a surjective functions
 -/
-def section_of_surj {α β : Type*} {f : α → β} (h : Surjective f) : β → α :=
+def right_inv_of_surj {α β : Type*} {f : α → β} (h : Surjective f) : β → α :=
   fun y : β ↦ Classical.choose (h y)
 
-lemma section_is_rightInverse {α β : Type*} {f : α → β} (h : Surjective f) :
-    RightInverse (section_of_surj h) f :=
+lemma right_inv_spec {α β : Type*} {f : α → β} (h : Surjective f) :
+    RightInverse (right_inv_of_surj h) f :=
   fun y ↦ Classical.choose_spec (h y)
 
 /-
@@ -79,11 +85,11 @@ lemma section_is_rightInverse {α β : Type*} {f : α → β} (h : Surjective f)
 -/
 namespace Descent
 def r (m : ℕ) : A → A ⧸ m ⬝ A := QuotientAddGroup.mk' (m ⬝ A)
-def s (m : ℕ) : A ⧸ m ⬝ A → A := section_of_surj <| QuotientAddGroup.mk'_surjective (m ⬝ A)
+def s (m : ℕ) : A ⧸ m ⬝ A → A := right_inv_of_surj <| QuotientAddGroup.mk'_surjective (m ⬝ A)
 
 lemma sr_inv (m : ℕ) : (r m) ∘ (s m : A ⧸ m ⬝ A → A) = id := by
   apply Function.RightInverse.id
-  exact section_is_rightInverse <| QuotientAddGroup.mk'_surjective (m ⬝ A)
+  exact right_inv_spec <| QuotientAddGroup.mk'_surjective (m ⬝ A)
 
 lemma class_eq_class_rep (m : ℕ) (a : A) : r m a = r m (s m (r m a)) := by
   calc r m a

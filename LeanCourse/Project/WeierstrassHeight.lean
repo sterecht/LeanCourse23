@@ -1,5 +1,5 @@
-import LeanCourse.Common
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
+import LeanCourse.Project.Helper
 
 set_option maxHeartbeats 500000
 /-
@@ -39,7 +39,10 @@ def H_q : ℚ → ℕ := fun r ↦ H_coord r.num r.den
 
 @[simp]
 lemma H_zero : @H W 0 = 1 := rfl
-lemma H_some {x y : ℚ} {h : W.nonsingular x y} : @H W (@Point.some _ _ _ x y h) = max (natAbs x.num) x.den := rfl
+
+lemma H_some {x y : ℚ} {h : W.nonsingular x y} :
+    @H W (@Point.some _ _ _ x y h) = max (natAbs x.num) x.den := rfl
+
 lemma Hxy_eq_Hx {x y : ℚ} (h : W.nonsingular x y) : @H W (@Point.some _ _ _ x y h) = H_q x := by
   rw [H_some, H_q, H_coord, if_neg x.den_nz, x.reduced]; simp
 
@@ -100,10 +103,11 @@ lemma H_le_coord (p : ℤ) (q : ℕ) (hq : q ≠ 0) (y : ℚ) (h : W.nonsingular
   rw [H_eq_coord]
   exact H_coord_le p q hq
 
-lemma Hq_le_frac {a b : ℤ} (hb : b ≠ 0) : H_q ((a : ℚ) / (b : ℚ)) ≤ max (natAbs a) (natAbs b) := by
+lemma Hq_eq_coord {a b : ℤ} (hb : b ≠ 0) : H_q ((a : ℚ) / (b : ℚ)) =
+    max (natAbs a) (natAbs b) / Int.gcd a b := by
   wlog h : 0 ≤ b generalizing a b
   · simp at h
-    rw [← natAbs_neg b, ← H_q_symm, ← div_neg]
+    rw [← natAbs_neg b, ← H_q_symm, ← div_neg, ← gcd_neg_right]
     exact this (by linarith : -b ≠ 0) (by linarith : 0 ≤ -b)
   have : ∃ b' : ℕ, (b' : ℤ) = b := CanLift.prf b h
   obtain ⟨b', h⟩ := this
@@ -118,150 +122,16 @@ lemma Hq_le_frac {a b : ℤ} (hb : b ≠ 0) : H_q ((a : ℚ) / (b : ℚ)) ≤ ma
   norm_num at hb
   rw [dif_neg hb]
   unfold Rat.normalize
-  simp only [Rat.maybeNormalize_eq]
-  by_cases natAbs (div a ↑(Nat.gcd (natAbs a) b')) ≤ b' / Nat.gcd (natAbs a) b'
-  rw [max_eq_right h]; apply le_trans <| Nat.div_le_self _ _
   simp
-  rw [not_le] at h; rw [max_eq_left (le_of_lt h)]
-  simp; left; exact Nat.div_le_self (natAbs a) (Nat.gcd (natAbs a) b')
-
-lemma eq_abs_of_lin_dep {a b c d : ℤ} (h : a * b + c * d = 0) (hac : Int.gcd c a = 1) (hbd : Int.gcd b d = 1) : natAbs b = natAbs c := by
-  have : natAbs a * natAbs b = natAbs c * natAbs d := by
-    rw [← natAbs_mul, ← natAbs_mul]
-    rw [add_eq_zero_iff_eq_neg.1 h]
-    simp
-  apply Nat.dvd_antisymm
-  rw [← Coprime.dvd_mul_right hbd]
-  use natAbs a; rw [← this, mul_comm]
-  rw [← Coprime.dvd_mul_right hac]
-  use natAbs d; rw[← this, mul_comm]
-
-lemma finsuppprod_pow (f : ℕ →₀ ℕ) (g : ℕ → ℕ → ℕ) (m : ℕ) :
-    (Finsupp.prod f g) ^ m = Finsupp.prod f fun x y ↦ (g x y) ^ m := by
-  unfold Finsupp.prod
-  simp
-  exact (Finset.prod_pow f.support m fun x ↦ g x (f x)).symm
-
-lemma gcd_pow_left {a b : ℤ} (n : ℕ) (h : Int.gcd a b = 1) : Int.gcd ((a : ℤ) ^ n) b = 1 := by
-  unfold Int.gcd at *
-  have : Coprime (natAbs a ^ n) (natAbs b ^ 1) := Nat.Coprime.pow n 1 h
-  rw [natAbs_pow a n]
-  simp at *
-  exact this
-
-lemma gcd_pow_right {a b : ℤ} (n : ℕ) (h : Int.gcd a b = 1) : Int.gcd a (b ^ n) = 1 := by
-  rw [Int.gcd_comm] at *
-  exact gcd_pow_left n h
-
-lemma root_of_copr_exp {a d : ℤ} {b c n m : ℕ} (hb : b ≠ 0) (hc : c ≠ 0) (h : a * (b : ℤ) ^ n + (c : ℤ) ^ m * d = 0)
-    (hac : Int.gcd c a = 1) (hbd : Int.gcd b d = 1) (hmn : Nat.gcd m n = 1) (hm : 0 < m) (hn : 0 < n) :
-    ∃ e : ℕ, e ^ m = b ∧ e ^ n = c := by
-  have : natAbs ((b : ℤ) ^ n) = natAbs ((c : ℤ) ^ m) :=
-    eq_abs_of_lin_dep h (gcd_pow_left m hac) (gcd_pow_left n hbd)
-  simp at this
-  norm_cast at this
-  have hp : ∀ p : ℕ, Nat.Prime p → m ∣ (Nat.factorization (b ^ n) p) := by
-    intro p _
-    use c.factorization p
-    rw [this]
-    simp
-  have hp2 : ∀ p : ℕ, Nat.Prime p → m ∣ (b.factorization p) := by
-    intro p h
-    have : m ∣ (b ^ n).factorization p := hp p h
-    simp at this
-    rw [mul_comm] at this
-    exact (Coprime.dvd_mul_right hmn).1 this
-  use Finsupp.prod (Nat.factorization b) (fun x y ↦ x ^ (y / m))
-  constructor
-  let xy := Nat.factorization b
-  have xyz : xy = Nat.factorization b := rfl
-  rw [← xyz, ← factorization_prod_pow_eq_self hb, xyz]
-  rw [finsuppprod_pow (Nat.factorization b) (fun x y ↦ x ^ (y / m)) m]
-  apply Finsupp.prod_congr
-  intro p h
-  rw [← Nat.pow_mul]
-  apply congrArg (HPow.hPow p)
-  rw [mul_comm]
-  exact Nat.mul_div_cancel' (hp2 p <| prime_of_mem_factorization h)
-  rw [← factorization_prod_pow_eq_self hc]
-  unfold Finsupp.prod
-  dsimp
-  have hh : n • b.factorization = m • c.factorization := by rw [← Nat.factorization_pow, ← Nat.factorization_pow, this]
-  have hs : b.factorization.support = c.factorization.support := by
-    have : b.factorization.support = (n • b.factorization).support := by
-      ext y; constructor <;> rw [Finsupp.mem_support_iff, Finsupp.mem_support_iff] <;> intro hy
-      simp; push_neg; exact ⟨(Nat.ne_of_lt hn).symm, hy⟩
-      intro h; simp at hy; rw [h] at hy; simp at hy
-    rw [this, hh]
-    ext y; constructor <;> rw [Finsupp.mem_support_iff, Finsupp.mem_support_iff] <;> intro hy
-    intro h; simp at hy; rw [h] at hy; simp at hy
-    simp; push_neg; exact ⟨(Nat.ne_of_lt hm).symm, hy⟩
-  rw [hs, ← Finset.prod_pow]
-  apply Finset.prod_congr rfl
-  intro x hx
-  rw [← Nat.pow_mul]
-  apply congrArg (HPow.hPow x)
-  have hx : x.Prime := prime_of_mem_factorization hx
-  rw [← Nat.mul_div_cancel (c.factorization x) hm, mul_comm _ n, ← Nat.mul_div_assoc n <| hp2 x hx]
-  apply (Nat.div_left_inj (Dvd.dvd.mul_left (hp2 x hx) n) ⟨c.factorization x, mul_comm (c.factorization x) m⟩).2
-  rw [mul_comm _ m]
-  calc n * b.factorization x
-    _ = (n • b.factorization) x := rfl
-    _ = (m • c.factorization) x := by rw [hh]
-    _ = m * c.factorization x   := rfl
-
-lemma Rat.reduced' (x : ℚ) : Int.gcd (x.den : ℤ) x.num = 1 := by
+  have : Nat.div (natAbs a) (Nat.gcd (natAbs a) b') = natAbs a / (Nat.gcd (natAbs a) b') := rfl
+  rw [this, Nat.max_div]
   unfold Int.gcd
   simp
-  rw [Nat.gcd_comm]
-  exact x.reduced
 
-lemma Int.gcd_add_mul_self (a b c : ℤ) : Int.gcd a (b + c * a) = Int.gcd a b := by
-  unfold gcd; apply (Nat.gcd_eq_iff (natAbs a) (natAbs (b + c * a))).2
-  constructor; exact Nat.gcd_dvd_left (natAbs a) (natAbs b)
-  constructor
-  rw [← ofNat_dvd_left]; apply Int.dvd_add; rw [ofNat_dvd_left]
-  exact Nat.gcd_dvd_right (natAbs a) (natAbs b)
-  apply Dvd.dvd.mul_left _ c; rw [ofNat_dvd_left]
-  exact Nat.gcd_dvd_left (natAbs a) (natAbs b)
-  intro d hd hd2
-  apply Nat.dvd_gcd; exact hd
-  rw [← ofNat_dvd_left] at *
-  have : b = b + c * a - c * a := by ring
-  rw [this]; apply Int.dvd_sub; exact hd2
-  exact Dvd.dvd.mul_left hd c
+lemma Hq_le_frac {a b : ℤ} (hb : b ≠ 0) : H_q ((a : ℚ) / (b : ℚ)) ≤ max (natAbs a) (natAbs b) := by
+  rw [Hq_eq_coord hb]
+  exact Nat.div_le_self _ _
 
-lemma Nat.max_sq {a b : ℕ} : max a b ^ 2 = max (a ^ 2) (b ^ 2) := by
-  wlog h : a ≤ b generalizing a b
-  · simp at h; rw [max_comm, max_comm (a ^ 2)]
-    exact this (le_of_lt h)
-  rw [max_eq_right h, max_eq_right (pow_le_pow_of_le_left h 2)]
-
-lemma Nat.max_pow {a b n : ℕ} : max a b ^ n = max (a ^ n) (b ^ n) := by
-  wlog h : a ≤ b generalizing a b
-  · simp at h; rw [max_comm, max_comm (a ^ n)]
-    exact this (le_of_lt h)
-  rw [max_eq_right h, max_eq_right (pow_le_pow_of_le_left h n)]
-
-lemma Nat.le_sq {a : ℕ} : a ≤ a ^ 2 := by
-  by_cases a = 0; rw [h]; simp
-  push_neg at h
-  rw [← Nat.pos_iff_ne_zero] at h
-  calc a
-    _ = a * 1 := (mul_one a).symm
-    _ ≤ a * a := Nat.mul_le_mul_left a h
-    _ = a ^ 2 := (Nat.pow_two a).symm
-
-lemma Nat.le_of_sq_le {a b : ℕ} (h : a ^ 2 ≤ b ^ 2) : a ≤ b := by
-  by_contra h'
-  simp at h'
-  have : b ^ 2 < a ^ 2 := Nat.pow_lt_pow_of_lt_left h' (by norm_num)
-  linarith
-
-lemma Nat.add_le_self {a b : ℕ} (h : a + b ≤ a) : b = 0 := by
-  have : a + b ≤ a + 0 := by rw [add_zero]; exact h
-  have : b ≤ 0 := (Nat.add_le_add_iff_left a b 0).1 h
-  exact le_zero.1 this
 
 lemma point_den_sq_cb {x y : ℚ} (h : W.equation x y) : ∃ d : ℕ, d ^ 2 = x.den ∧ d ^ 3 = y.den := by
   unfold WeierstrassCurve.equation at h
@@ -335,7 +205,8 @@ lemma WeierstrassCurve.int_equation {x y} (h : W.equation x y) :
   The first inequality : ∀ p ∃ C₁ ∀ q : H (p + q) ≤ 2 * H q + C₁
 -/
 def C_ineq1_num (x y : ℚ) : ℕ := x.den * natAbs x.num + x.den * natAbs x.num * natAbs W.a₄.num + natAbs (x.num ^ 2) +
-                                natAbs W.a₄.num * x.den ^ 2 + 2 * x.den * natAbs y.num * (1 + natAbs W.a₄.num + natAbs W.a₆.num) + 2 * natAbs W.a₆.num * x.den ^ 2
+                                natAbs W.a₄.num * x.den ^ 2 + 2 * x.den * natAbs y.num * (1 + natAbs W.a₄.num + natAbs W.a₆.num) +
+                                2 * natAbs W.a₆.num * x.den ^ 2
 def C_ineq1_den (x : ℚ) : ℕ := (natAbs (x.num ^ 2) + x.den ^ 2 + 2 * x.den * natAbs (x.num))
 def C_ineq1 (x y : ℚ) : ℕ := @C_ineq1_num W x y + C_ineq1_den x
 
@@ -540,11 +411,11 @@ theorem height_ineq1 (p : Point W) : ∃ C > 0, ∀ q : Point W, H (p + q) ≤ C
     h : p/q ↦ p,q
   loosing at most a finite summand or a finite factor at each step
 -/
-def f (W : WeierstrassCurve ℚ) : W.Point → (ℚ × ℚ) × Fin 2
+private def f (W : WeierstrassCurve ℚ) : W.Point → (ℚ × ℚ) × Fin 2
   | 0 => ((0,0),0)
   | @Point.some _ _ _ x y _ => ((x,y),1)
 
-lemma f_inj : Function.Injective (f W) := by
+private lemma f_inj : Function.Injective (f W) := by
   intro a b h
   rcases a with ha | @⟨x,y,ha⟩ <;> rcases b with hb | @⟨z,w,hb⟩
   · rfl
@@ -552,7 +423,7 @@ lemma f_inj : Function.Injective (f W) := by
   · simp; unfold f at h; simp at h
   · simp; unfold f at h; simp at h; exact h
 
-lemma f_range : Set.range (f W) = insert ((0,0),0) {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2} := by
+private lemma f_range : Set.range (f W) = insert ((0,0),0) {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2} := by
   ext z; constructor
   · intro h
     obtain ⟨p, hp⟩ := h
@@ -568,12 +439,13 @@ lemma f_range : Set.range (f W) = insert ((0,0),0) {z | z.2 = 1 ∧ W.nonsingula
     use Point.some h.2; unfold f; simp
     exact Prod.ext rfl h.1.symm
 
-lemma height_f {p : W.Point} (hp : p ≠ 0) : H p = H_q ((f W) p).1.1 := by
+private lemma height_f {p : W.Point} (hp : p ≠ 0) : H p = H_q ((f W) p).1.1 := by
   rcases p with h | @⟨x,y,h⟩
   by_contra; exact hp rfl
   unfold f; simp; exact Hxy_eq_Hx h
 
-lemma f_range_bound {c : ℕ} (hc : 0 < c) : (f W) '' {p : Point W | H p ≤ c} = insert ((0,0),0) {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} := by
+private lemma f_range_bound {c : ℕ} (hc : 0 < c) : (f W) '' {p : Point W | H p ≤ c} =
+    insert ((0,0),0) {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} := by
   ext z; constructor
   · intro h
     obtain ⟨p, h⟩ := h; simp; rcases p with hp | @⟨x,y,hp⟩
@@ -593,9 +465,9 @@ lemma f_range_bound {c : ℕ} (hc : 0 < c) : (f W) '' {p : Point W | H p ≤ c} 
     constructor; simp; rw [height_f (by simp), hp]; exact h.2.2
     exact hp
 
-def g : (ℚ × ℚ) × Fin 2 → ℚ × Fin 2 := fun ((x,y),_) ↦ if 0 ≤ y then (x,1) else (x,0)
+private def g : (ℚ × ℚ) × Fin 2 → ℚ × Fin 2 := fun ((x,y),_) ↦ if 0 ≤ y then (x,1) else (x,0)
 
-lemma g_inj (c : ℕ) : Set.InjOn g {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} := by
+private lemma g_inj (c : ℕ) : Set.InjOn g {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} := by
   intro x hx y hy h; simp at *
   apply Prod.ext
   · unfold g at h;
@@ -623,7 +495,8 @@ lemma g_inj (c : ℕ) : Set.InjOn g {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 �
       linarith
   · rw [hx.1, hy.1]
 
-lemma g_range_bound (c : ℕ) :  g '' {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} ⊆ {r : ℚ | H_q r ≤ c} ×ˢ {0,1} := by
+private lemma g_range_bound (c : ℕ) :  g '' {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} ⊆
+    {r : ℚ | H_q r ≤ c} ×ˢ {0,1} := by
   rintro ⟨r, t⟩ ⟨z, hz⟩
   simp at *; constructor
   · unfold g at hz
@@ -642,9 +515,9 @@ lemma g_range_bound (c : ℕ) :  g '' {z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2
     interval_cases (t : ℕ)
     simp at ht0; simp
 
-def h : ℚ → ℤ × ℕ := fun r ↦ (r.num, r.den)
+private def h : ℚ → ℤ × ℕ := fun r ↦ (r.num, r.den)
 
-lemma h_inj : Function.Injective h := by
+private lemma h_inj : Function.Injective h := by
   intro x y hxy
   unfold h at hxy
   ext
@@ -653,7 +526,7 @@ lemma h_inj : Function.Injective h := by
   have : (x.num, x.den).2 = (y.num, y.den).2 := congrArg Prod.snd hxy
   simp at this; exact this
 
-lemma h_range_bound (c : ℕ) : h '' {r : ℚ | H_q r ≤ c} ⊆ {p : ℤ | natAbs p ≤ c} ×ˢ {q : ℕ | q ≤ c} := by
+private lemma h_range_bound (c : ℕ) : h '' {r : ℚ | H_q r ≤ c} ⊆ {p : ℤ | natAbs p ≤ c} ×ˢ {q : ℕ | q ≤ c} := by
   rintro ⟨x,y⟩ ⟨r, hr⟩
   simp
   unfold h at hr; simp at hr
@@ -661,9 +534,9 @@ lemma h_range_bound (c : ℕ) : h '' {r : ℚ | H_q r ≤ c} ⊆ {p : ℤ | natA
   unfold H_q at hr; unfold H_coord at hr; rw [if_neg r.den_nz, r.reduced, Nat.div_one] at hr
   exact ⟨le_trans (le_max_left (natAbs r.num) r.den) hr.1, le_trans (le_max_right (natAbs r.num) r.den) hr.1⟩
 
-def i (c : ℕ) : ℤ → ℕ := fun n ↦ if 0 ≤ n then natAbs n else c + natAbs n
+private def i (c : ℕ) : ℤ → ℕ := fun n ↦ if 0 ≤ n then natAbs n else c + natAbs n
 
-lemma i_inj (c : ℕ) : Set.InjOn (i c) {p | natAbs p ≤ c} := by
+private lemma i_inj (c : ℕ) : Set.InjOn (i c) {p | natAbs p ≤ c} := by
   intro x hx y hy hxy
   unfold i at hxy; simp at hx; simp at hy
   by_cases hx0 : 0 ≤ x <;> by_cases hy0 : 0 ≤ y
@@ -680,7 +553,7 @@ lemma i_inj (c : ℕ) : Set.InjOn (i c) {p | natAbs p ≤ c} := by
     rcases Int.natAbs_eq_natAbs_iff.1 hxy with he | hn
     exact he; linarith
 
-lemma i_range (c : ℕ) : i c '' {p | natAbs p ≤ c} = {n : ℕ | n ≤ 2 * c} := by
+private lemma i_range (c : ℕ) : i c '' {p | natAbs p ≤ c} = {n : ℕ | n ≤ 2 * c} := by
   ext x; constructor <;> intro hx
   · obtain ⟨y, hy, hx⟩ := hx
     simp; simp at hy; unfold i at hx
@@ -711,7 +584,7 @@ lemma i_range (c : ℕ) : i c '' {p | natAbs p ≤ c} = {n : ℕ | n ≤ 2 * c} 
     have s : ↑(c + natAbs ((c : ℤ) - (x : ℤ))) = (c : ℤ) + (natAbs ((c : ℤ) - (x : ℤ)) : ℤ) := rfl
     rw [s, ← this]; simp
 
-lemma g_range_fin (c : ℕ) : Set.Finite {r : ℚ | H_q r ≤ c} := by
+private lemma g_range_fin (c : ℕ) : Set.Finite {r : ℚ | H_q r ≤ c} := by
   apply Set.Finite.of_finite_image _ <| Function.Injective.injOn h_inj {r : ℚ | H_q r ≤ c}
   apply Set.Finite.subset _ (h_range_bound c)
   apply Set.Finite.prod _ (Set.finite_le_nat c)
@@ -719,7 +592,8 @@ lemma g_range_fin (c : ℕ) : Set.Finite {r : ℚ | H_q r ≤ c} := by
   rw [i_range]
   exact Set.finite_le_nat (2 * c)
 
-lemma f_range_fin (c : ℕ) : Set.Finite ({z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} : Set ((ℚ × ℚ) × Fin 2)) := by
+private lemma f_range_fin (c : ℕ) : Set.Finite ({z | z.2 = 1 ∧ W.nonsingular z.1.1 z.1.2 ∧ H_q z.1.1 ≤ c} :
+    Set ((ℚ × ℚ) × Fin 2)) := by
   apply Set.Finite.of_finite_image _ (g_inj ha₁ ha₂ ha₃ c)
   apply Set.Finite.subset _ (g_range_bound c)
   apply Set.Finite.prod (g_range_fin c)
