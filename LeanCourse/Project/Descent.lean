@@ -29,10 +29,12 @@ def m_multiples (m : ℕ) (A : Type*) [AddCommGroup A] : AddSubgroup A where
     simp
     exact ha
 
-infixl:70 " ⬝ " => m_multiples
+scoped[Descent] infixl:70 " ⬝ " => m_multiples
+open Descent
+
 example : AddSubgroup A := 3 ⬝ A
 
-lemma temp (a b : A) (m : ℕ) (h : QuotientAddGroup.mk' (m ⬝ A) a = QuotientAddGroup.mk' (m ⬝ A) b) :
+lemma eq_quot_m (a b : A) (m : ℕ) (h : QuotientAddGroup.mk' (m ⬝ A) a = QuotientAddGroup.mk' (m ⬝ A) b) :
     ∃ c : A, a = b + m • c := by
   rw [QuotientAddGroup.mk'_eq_mk'] at h
   obtain ⟨z, ⟨c, hc⟩, hz⟩ := h
@@ -99,10 +101,10 @@ lemma class_eq_class_rep (m : ℕ) (a : A) : r m a = r m (s m (r m a)) := by
 
 def p (x₀ : A) (m : ℕ) : ℕ → A
   | 0 => x₀
-  | n + 1 =>  Classical.choose <| temp (p x₀ m n) (s m (r m (p x₀ m n))) m <| class_eq_class_rep m (p x₀ m n)
+  | n + 1 =>  Classical.choose <| eq_quot_m (p x₀ m n) (s m (r m (p x₀ m n))) m <| class_eq_class_rep m (p x₀ m n)
 
 lemma p_rec_eq (x₀ : A) (m : ℕ) (n : ℕ) : p x₀ m n = s m (r m (p x₀ m n)) + m • (p x₀ m (n + 1)) := by
-  exact Classical.choose_spec <| temp (p x₀ m n) (s m (r m (p x₀ m n))) m <| class_eq_class_rep m (p x₀ m n)
+  exact Classical.choose_spec <| eq_quot_m (p x₀ m n) (s m (r m (p x₀ m n))) m <| class_eq_class_rep m (p x₀ m n)
 
 /-
   The main theorem we use to conclude the Mordell-Weil theorem:

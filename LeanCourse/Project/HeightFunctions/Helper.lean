@@ -2,7 +2,11 @@ import LeanCourse.Common
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
 
 open Nat Int BigOperators
-
+/-
+  Mostly helper functions that I couldn't find in mathlib.
+  Some of these, or at least equivalent statements, probably exist somewhere,
+  but it would have taken longer to find them than to prove them here.
+-/
 lemma eq_abs_of_lin_dep {a b c d : ℤ} (h : a * b + c * d = 0)
     (hac : Int.gcd c a = 1) (hbd : Int.gcd b d = 1) : natAbs b = natAbs c := by
   have : natAbs a * natAbs b = natAbs c * natAbs d := by
@@ -32,6 +36,7 @@ lemma gcd_pow_right {a b : ℤ} (n : ℕ) (h : Int.gcd a b = 1) : Int.gcd a (b ^
   rw [Int.gcd_comm] at *
   exact gcd_pow_left n h
 
+-- This lemma is more complicated: If ab^n+c^md with everything coprime, b is an m-th power and c an n-th power.
 lemma root_of_copr_exp {a d : ℤ} {b c n m : ℕ} (hb : b ≠ 0) (hc : c ≠ 0) (h : a * (b : ℤ) ^ n + (c : ℤ) ^ m * d = 0)
     (hac : Int.gcd c a = 1) (hbd : Int.gcd b d = 1) (hmn : Nat.gcd m n = 1) (hm : 0 < m) (hn : 0 < n) :
     ∃ e : ℕ, e ^ m = b ∧ e ^ n = c := by
@@ -146,17 +151,14 @@ lemma Nat.le_pow {a n : ℕ} (hn : 0 < n) : a ≤ a ^ n := by
     _ ≤ a * a ^ k := Nat.mul_le_mul_left a <| hk (Nat.pos_of_ne_zero H)
     _ = a ^ (k + 1) := Nat.pow_succ'.symm
 
-
 lemma Nat.le_of_sq_le {a b : ℕ} (h : a ^ 2 ≤ b ^ 2) : a ≤ b := by
   by_contra h'
   simp at h'
   have : b ^ 2 < a ^ 2 := Nat.pow_lt_pow_of_lt_left h' (by norm_num)
   linarith
 
-lemma Nat.add_le_self {a b : ℕ} (h : a + b ≤ a) : b = 0 := by
-  have : a + b ≤ a + 0 := by rw [add_zero]; exact h
-  have : b ≤ 0 := (Nat.add_le_add_iff_left a b 0).1 h
-  exact le_zero.1 this
+lemma Nat.add_le_self {a b : ℕ} (h : a + b ≤ a) : b = 0 :=
+  le_zero.1 <| (Nat.add_le_add_iff_left a b 0).1 h
 
 lemma Nat.max_div {a b c : ℕ} : max (a / c) (b / c) = max a b / c := by
   wlog h : a ≤ b

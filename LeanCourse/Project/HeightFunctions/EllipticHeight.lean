@@ -1,5 +1,13 @@
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
-import LeanCourse.Project.WeierstrassHeight
+import LeanCourse.Project.HeightFunctions.WeierstrassHeight
+
+/-
+  This file continuous WeierstrassHeight. We now assume the curve to be nonsingular,
+  which allows to bound the amount of cancellation occuring in the fraction for x(2P),
+  thus establishing the remaining inequality needed for the descent argument.
+  Reference: J Silverman, The Arithmetic of Elliptic Curves, VIII.4
+  This is lemma VIII.4.1b)
+-/
 
 open MvPolynomial Int
 
@@ -280,6 +288,11 @@ lemma H_F_div_G_bound {a b : ℤ} (h : Int.gcd a b = 1) (hG : eval ![a, b] (@G E
 
 open WeierstrassCurve Polynomial
 
+-- We need to treat points of order 2 differently. For this, we need to know that there are only
+-- finitely many of these. For ℚ (or more generally, global fields), this follows from reducing
+-- to a suitable local field, as developed in (or a generalization of) WeakMordelll/Local.lean.
+-- But this holds over any field, so it's nice to show it without these assumptions.
+-- Concretely, the points of order 2 are exactly those with y = 0, i.e. the zeroes of a polynomial.
 lemma two_tor_eq_y0 {x y : ℚ} (h : E.equation x y) : 2 • (Point.some (E.nonsingular h)) = 0 ↔ y = 0 := by
   have r : 2 • (Point.some (E.nonsingular h)) = Point.some (E.nonsingular h) + Point.some (E.nonsingular h) := rfl
   constructor <;> intro hp
@@ -362,6 +375,7 @@ lemma H_two_tor_le (p : E.Point) (h : 2 • p = 0) : H p ≤ C_tor ha₁ ha₂ h
   rw [Finset.mem_image]
   use p; simp; exact h
 
+-- the main inequality, bounding H(2P) from below
 theorem height_ineq2 : ∃ C > 0, ∀ p : E.Point, C * H (2 • p) ≥ (H p) ^ 4 := by
   use max (C_tor ha₁ ha₂ ha₃) (2 * @C_ineq_2 E) ; constructor
   · exact lt_of_lt_of_le (lt_of_lt_of_le (H_pos 0) (H_two_tor_le ha₁ ha₂ ha₃ 0 rfl)) (le_max_left _ _)
@@ -410,7 +424,6 @@ theorem height_ineq2 : ∃ C > 0, ∀ p : E.Point, C * H (2 • p) ≥ (H p) ^ 4
     rw [← mul_div_assoc, mul_one, ← pow_succ, pow_succ' _ 3, div_mul_eq_div_div, div_self (by simp; exact x.den_nz)] at h
     rw [← mul_div_assoc, mul_one, mul_div_assoc, ← div_pow, mul_div_assoc, Rat.num_div_den] at h
     rw [← Rat.eq_num_of_isInt ha₄, ← Rat.eq_num_of_isInt ha₆] at h; exact den1 h
-  have : ((eval ![a, b] (@G E)) : ℚ) ≠ 0 := by norm_num; exact hG
   have hden2 : 4 * (x.num : ℚ) ^ 3 * (x.den : ℚ) + 4 * (E.a₄.num : ℚ) * (x.num : ℚ) * (x.den : ℚ) ^ 3 +
         4 * (E.a₆.num : ℚ) * (x.den : ℚ) ^ 4 ≠ 0 := by
     unfold G at hG; simp at hG
@@ -442,7 +455,56 @@ theorem height_ineq2 : ∃ C > 0, ∀ p : E.Point, C * H (2 • p) ≥ (H p) ^ 4
   unfold H_q; unfold H_coord; rw [if_neg x.den_nz, x.reduced, Nat.div_one]
   simp
 
+-- we use log H instead of H because we want a function that behaves additively.
+-- So we have to translate the previous results into this form.
+-- This is straightforward.
+def h : E.Point → ℝ := fun p ↦ Real.log (H p)
 
+@[simp]
+lemma h_zero : @h E 0 = 0 := by unfold h; simp
+
+lemma h_nonneg (p : E.Point) : 0 ≤ h p := by
+  unfold h
+  rw [Real.le_log_iff_exp_le (by norm_cast; exact H_pos p)]
+  simp; exact H_pos p
+
+theorem height_sum_le (p : E.Point) : ∃ C > 0, ∀ q : E.Point, h (p + q) ≤ 2 * (h q) + C := by
+    obtain ⟨C, hC, h⟩ := height_ineq1 ha₁ ha₂ ha₃ ha₄ ha₆ p
+    use max 1 (Real.log C); constructor; simp
+    intro q
+    apply le_trans _ <| add_le_add_left (le_max_right 1 (Real.log C)) _
+    unfold h
+    have : (2 : ℝ) = ((2 : ℕ) : ℝ) := rfl
+    rw [this, ← Real.log_pow _ 2, ← Real.log_mul _ (by norm_cast; linarith), mul_comm]
+    apply Real.log_le_log' (by norm_cast; exact H_pos (p + q))
+    norm_cast
+    exact h q
+    simp; linarith [H_pos q]
+
+theorem height_le_double : ∃ C > 0, ∀ p : E.Point, h (2 • p) ≥ 4 * (h p) - C := by
+  obtain ⟨C, hC, h⟩:= height_ineq2 ha₁ ha₂ ha₃ ha₄ ha₆
+  use max 1 (Real.log C); constructor; simp
+  intro p; simp
+  apply le_trans _ <| add_le_add_left (le_max_right _ _) _
+  unfold h
+  have : (4 : ℝ) = ((4 : ℕ) : ℝ) := rfl
+  rw [this, ← Real.log_pow, ← Real.log_mul _ (by norm_cast; linarith), mul_comm]
+  apply Real.log_le_log' (by norm_num; apply pow_pos _ 4; norm_num; exact H_pos p)
+  norm_cast
+  exact h p
+  simp; linarith [H_pos (2 • p)]
+
+theorem fin_of_fin_height : ∀ c : ℝ, Set.Finite {p : E.Point | h p ≤ c} := by
+  intro c
+  by_cases hc : c < 0
+  · have : {p : E.Point | h p ≤ c} = ⊥ := by
+      ext p; simp; linarith [h_nonneg p]
+    rw [this]; simp
+  unfold h; simp at hc
+  have : {p : E.Point | Real.log (H p) ≤ c} ⊆ {p : E.Point | H p ≤ Real.exp c} := by
+    intro p; simp
+    exact (Real.log_le_iff_le_exp (by norm_cast; exact H_pos p)).1
+  exact Set.Finite.subset (height_finite ha₁ ha₂ ha₃ (Real.exp c)) this
 
 
 end EllipticHeight

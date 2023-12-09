@@ -1,5 +1,5 @@
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
-import LeanCourse.Project.Helper
+import LeanCourse.Project.HeightFunctions.Helper
 
 set_option maxHeartbeats 500000
 /-
@@ -58,7 +58,8 @@ lemma H_symm (p : Point W) : H (-p) = H p := by
 
 /-
   Lots of helper lemmas
-  TODO: sort, namespaces, maybe separate files
+  show that the different height function definitions agree
+  and some simple equations and inequalities on heights
 -/
 lemma H_q_symm (r : ℚ) : H_q (-r) = H_q r := by
   unfold H_q
@@ -132,7 +133,7 @@ lemma Hq_le_frac {a b : ℤ} (hb : b ≠ 0) : H_q ((a : ℚ) / (b : ℚ)) ≤ ma
   rw [Hq_eq_coord hb]
   exact Nat.div_le_self _ _
 
-
+-- Every p ∈ E(ℤ) can be written as p=(a/d^2, b/d^3) with (a,d)=(b,d)=1
 lemma point_den_sq_cb {x y : ℚ} (h : W.equation x y) : ∃ d : ℕ, d ^ 2 = x.den ∧ d ^ 3 = y.den := by
   unfold WeierstrassCurve.equation at h
   unfold WeierstrassCurve.polynomial at h
@@ -236,8 +237,6 @@ lemma Hsum1_xy {x₁ y₁ x₂ y₂ : ℚ} (hx : x₁ ≠ x₂) (h₁ : W.nonsin
   have hden3 : (d₁ : ℚ) ^ 3 ≠ 0 := by norm_cast; rw [hd₁y]; exact y₁.den_nz
   have hden4 : (d₂ : ℚ) ^ 2 ≠ 0 := by norm_cast; rw [hd₂x]; exact x₂.den_nz
   have hden5 : (d₂ : ℚ) ^ 3 ≠ 0 := by norm_cast; rw [hd₂y]; exact y₂.den_nz
-  have : ((x₁.num : ℚ) / (d₁ : ℚ) ^ 2 - (x₂.num : ℚ) / (d₂ : ℚ) ^ 2) ^ 2 ≠ 0 := by
-    field_simp; intro h; rw [mul_comm _ ((x₂.num) : ℚ)] at h; rw [h] at hden1₂; simp at hden1₂
   have hden7 : ((d₁ : ℚ) ^ 3 * (d₂ : ℚ) ^ 3) ^ 2 * ((x₁.num : ℚ) * (d₂ : ℚ) ^ 2 - (d₁ : ℚ) ^ 2 * (x₂.num : ℚ)) ^ 2 ≠ 0 := by
     rw [mul_comm ((d₁ : ℚ) ^ 2) (x₂.num : ℚ)]
     exact mul_ne_zero (pow_ne_zero 2 <| mul_ne_zero hden3 hden5) hden1₂
