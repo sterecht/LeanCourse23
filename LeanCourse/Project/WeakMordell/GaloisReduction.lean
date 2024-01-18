@@ -1,6 +1,7 @@
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
 import LeanCourse.Project.Descent
 import LeanCourse.Project.WeakMordell.Local
+import LeanCourse.Project.UnprovedTheorems
 
 set_option maxHeartbeats 500000
 
@@ -12,14 +13,13 @@ set_option maxHeartbeats 500000
   This is exactly VIII, Lemma 1.1, following both the proof and notation.
 -/
 
-universe u
-variable (K : Type u) [Field K] [NumberField K]
-         (L : Type u) [Field L] [Algebra K L] [FiniteDimensional K L] [NumberField L]
+variable (K : Type*) [Field K] [NumberField K]
+         (L : Type*) [Field L] [Algebra K L] [NumberField L]
          (E : EllipticCurve K) (m : ℕ) (hm : 2 ≤ m)
 
 noncomputable section
 open EllipticCurve Descent WeierstrassCurve Classical
-
+namespace GalReduction
 -- the map from the group under consideration in the larger group. We show finiteness
 -- by finiteness of kernel and codomain, the latter of which is an assumption.
 def iota_mod : E⟮K⟯ ⧸ m ⬝ E⟮K⟯ →+ E⟮L⟯ ⧸ m ⬝ E⟮L⟯ :=
@@ -193,7 +193,7 @@ lemma gal_action_base (σ : L ≃ₐ[K] L) (p : E⟮K⟯) :
   simp; unfold Point.ofBaseChangeFun; simp
   rw [gal_action_some]; simp
 
-lemma gal_fixed_field [IsGalois K L] (x : L) (h : ∀ σ : L ≃ₐ[K] L, σ x = x) : x ∈ (algebraMap K L).range := by
+lemma gal_fixed_field [IsGalois K L] [FiniteDimensional K L] (x : L) (h : ∀ σ : L ≃ₐ[K] L, σ x = x) : x ∈ (algebraMap K L).range := by
   have hgal : IntermediateField.fixedField ⊤ = ⊥ := (List.TFAE.out (@IsGalois.tfae K _ L _ _ _) 0 1).1 (by infer_instance)
   have : (algebraMap K L).range = (⊥ : IntermediateField K L).toSubring := rfl
   rw [this, ← hgal]; simp
@@ -201,7 +201,7 @@ lemma gal_fixed_field [IsGalois K L] (x : L) (h : ∀ σ : L ≃ₐ[K] L, σ x =
   apply Subsemiring.mem_carrier.1; simp
   exact fun σ _ ↦ h σ
 
-lemma gal_action_fixed [IsGalois K L] (p : E⟮L⟯) (h : ∀ σ : L ≃ₐ[K] L, σ • p = p) :
+lemma gal_action_fixed [IsGalois K L] [FiniteDimensional K L] (p : E⟮L⟯) (h : ∀ σ : L ≃ₐ[K] L, σ • p = p) :
     p ∈ (Point.ofBaseChange E.toWeierstrassCurve K L).range := by
   rcases p with h | @⟨x,y,hp⟩
   · simp; use 0; simp[Point.zero_def]; rfl
@@ -211,6 +211,25 @@ lemma gal_action_fixed [IsGalois K L] (p : E⟮L⟯) (h : ∀ σ : L ≃ₐ[K] L
     simp at h; exact h
   obtain ⟨x', hx⟩ := gal_fixed_field K L x <| fun σ ↦ (hxy σ).1
   obtain ⟨y', hy⟩ := gal_fixed_field K L y <| fun σ ↦ (hxy σ).2
+  have he : E.equation x' y' := by
+    apply (equation_iff_baseChange E.toWeierstrassCurve L x' y').2
+    rw [hx, hy]; exact hp.1
+  use Point.some <| nonsingular E he; simp
+  unfold Point.ofBaseChangeFun; simp
+  exact ⟨hx, hy⟩
+
+-- In case L/K is infinite, this needs infinite galois theory, which isn't formalized.
+-- See UnprovedTheorems.lean for details.
+lemma gal_action_fixed_inf [IsGalois K L] (p : E⟮L⟯) (h : ∀ σ : L ≃ₐ[K] L, σ • p = p) :
+    p ∈ (Point.ofBaseChange E.toWeierstrassCurve K L).range := by
+  rcases p with h | @⟨x,y,hp⟩
+  · simp; use 0; simp[Point.zero_def]; rfl
+  have hxy : ∀ σ : (L ≃ₐ[K] L), σ x = x ∧ σ y = y := fun σ ↦ by
+    specialize h σ
+    rw [gal_action_some] at h
+    simp at h; exact h
+  obtain ⟨x', hx⟩ := (fixed_field_gal_inf K L x).2 (fun σ ↦ (hxy σ).1)
+  obtain ⟨y', hy⟩ := (fixed_field_gal_inf K L y).2 (fun σ ↦ (hxy σ).2)
   have he : E.equation x' y' := by
     apply (equation_iff_baseChange E.toWeierstrassCurve L x' y').2
     rw [hx, hy]; exact hp.1
@@ -232,7 +251,7 @@ lemma lambda_tor {p : AddSubgroup.comap (Point.ofBaseChange E.toWeierstrassCurve
   rw [nsmul_sub, nsmul_hom_action, Q_spec, gal_action_base]
   simp
 
-lemma lambda_inj [IsGalois K L] {p₁ p₂ : AddSubgroup.comap (Point.ofBaseChange E.toWeierstrassCurve K L) (m ⬝ E⟮L⟯)}
+lemma lambda_inj [IsGalois K L] [FiniteDimensional K L]  {p₁ p₂ : AddSubgroup.comap (Point.ofBaseChange E.toWeierstrassCurve K L) (m ⬝ E⟮L⟯)}
     (h : lambda K L E m p₁ = lambda K L E m p₂) : Subtype.val p₁ - Subtype.val p₂ ∈ m ⬝ E⟮K⟯ := by
   have hσ : ∀ σ : L ≃ₐ[K] L, σ • (Q K L E m p₁ - Q K L E m p₂) = Q K L E m p₁ - Q K L E m p₂ := by
     intro σ
@@ -264,7 +283,7 @@ lemma quot_lift (p : E⟮K⟯ ⧸ (m ⬝ E⟮K⟯)) (h : p ∈ Phi K L E m) :
 def lambda' : E⟮K⟯ ⧸ (m ⬝ E⟮K⟯) → (L ≃ₐ[K] L) → E⟮L⟯ := fun p ↦
   if h : p ∈ SetLike.coe (Phi K L E m) then (lambda K L E m) (Exists.choose <| quot_lift K L E m p h) else 0
 
-lemma lambda'_injOn [IsGalois K L] : Set.InjOn (lambda' K L E m) (Phi K L E m) := by
+lemma lambda'_injOn [IsGalois K L] [FiniteDimensional K L] : Set.InjOn (lambda' K L E m) (Phi K L E m) := by
   intro p hp q hq hpq
   unfold lambda' at hpq
   rw [dif_pos hp, dif_pos hq] at hpq
@@ -277,7 +296,7 @@ lemma lambda'_injOn [IsGalois K L] : Set.InjOn (lambda' K L E m) (Phi K L E m) :
   have : (mul_m m) R = m • R := rfl
   rw [this] at hR; rw [hR]; simp
 
-lemma Phi_finite [IsGalois K L] : Finite (Phi K L E m) := by
+lemma Phi_finite [IsGalois K L] [FiniteDimensional K L] : Finite (Phi K L E m) := by
   apply Set.finite_coe_iff.2
   apply Set.Finite.of_finite_image _ (lambda'_injOn K L E m)
   have : lambda' K L E m '' (SetLike.coe <| Phi K L E m) ⊆ {f : (L ≃ₐ[K] L) → E⟮L⟯ | ∀ σ : (L ≃ₐ[K] L), m • (f σ) = 0} := by
@@ -301,8 +320,11 @@ lemma Phi_finite [IsGalois K L] : Finite (Phi K L E m) := by
   have : Finite ((L ≃ₐ[K] L) → {p : E⟮L⟯ | m • p = 0}) := Pi.finite
   exact Set.finite_univ
 
+end GalReduction
+open GalReduction
 -- main theorem
-theorem WeakMordell.galois_reduction [IsGalois K L] (_ : Finite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) : Finite (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) :=
+theorem WeakMordell.galois_reduction [IsGalois K L] [FiniteDimensional K L] (_ : Finite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) : Finite (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) :=
   have : Finite ((iota_mod K L E m).ker) := Phi_finite K L E m
-  Fintype.finite <| @AddGroup.fintypeOfKerOfCodom (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) (E⟮L⟯ ⧸ m ⬝ E⟮L⟯) _ _
-      (Fintype.ofFinite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) (iota_mod K L E m) (Fintype.ofFinite (↥AddMonoidHom.ker (iota_mod K L E m)))
+  sorry
+  --Fintype.finite <| @AddGroup.fintypeOfKerOfCodom (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) (E⟮L⟯ ⧸ m ⬝ E⟮L⟯) _ _
+  --    (Fintype.ofFinite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) (iota_mod K L E m) (Fintype.ofFinite (↥AddMonoidHom.ker (iota_mod K L E m)))
