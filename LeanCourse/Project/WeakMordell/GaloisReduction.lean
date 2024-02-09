@@ -1,7 +1,5 @@
 import Mathlib.AlgebraicGeometry.EllipticCurve.Point
 import LeanCourse.Project.Descent
-import LeanCourse.Project.WeakMordell.Local
-import LeanCourse.Project.UnprovedTheorems
 
 set_option maxHeartbeats 500000
 
@@ -13,12 +11,28 @@ set_option maxHeartbeats 500000
   This is exactly VIII, Lemma 1.1, following both the proof and notation.
 -/
 
-variable (K : Type*) [Field K] [NumberField K]
-         (L : Type*) [Field L] [Algebra K L] [NumberField L]
+universe u
+variable (K : Type u) [Field K] [NumberField K]
+         (L : Type u) [Field L] [Algebra K L] [NumberField L]
          (E : EllipticCurve K) (m : ℕ) (hm : 2 ≤ m)
 
 noncomputable section
 open EllipticCurve Descent WeierstrassCurve Classical
+
+notation E "⟮" S "⟯" => Point (toWeierstrassCurve (baseChange E S))
+
+def m_tor (G : Type*) [AddCommGroup G] (m : ℕ) : AddSubgroup G where
+  carrier := {g : G | m • g = 0}
+  add_mem' := fun a b ↦ by simp at *; simp[a, b]
+  zero_mem' := by simp
+  neg_mem' := by simp
+
+
+namespace EllipticCurve
+theorem tor_finite {K : Type*} [Field K] (E : EllipticCurve K) (m : ℕ) : Finite {p : E⟮K⟯ | m • p = 0} := by
+  sorry
+end EllipticCurve
+
 namespace GalReduction
 -- the map from the group under consideration in the larger group. We show finiteness
 -- by finiteness of kernel and codomain, the latter of which is an assumption.
@@ -219,7 +233,11 @@ lemma gal_action_fixed [IsGalois K L] [FiniteDimensional K L] (p : E⟮L⟯) (h 
   exact ⟨hx, hy⟩
 
 -- In case L/K is infinite, this needs infinite galois theory, which isn't formalized.
--- See UnprovedTheorems.lean for details.
+-- See FinalOverview.lean for details.
+theorem fixed_field_gal_inf (F E : Type*) [Field F] [Field E] [Algebra F E] [IsGalois F E] (x : E) :
+    x ∈ (algebraMap F E).range ↔ (∀ σ : (E ≃ₐ[F] E), σ x = x) :=
+  sorry
+
 lemma gal_action_fixed_inf [IsGalois K L] (p : E⟮L⟯) (h : ∀ σ : L ≃ₐ[K] L, σ • p = p) :
     p ∈ (Point.ofBaseChange E.toWeierstrassCurve K L).range := by
   rcases p with h | @⟨x,y,hp⟩
@@ -319,12 +337,11 @@ lemma Phi_finite [IsGalois K L] [FiniteDimensional K L] : Finite (Phi K L E m) :
   have hf2 : Finite {p : E⟮L⟯ | m • p = 0} := tor_finite (E.baseChange L) m
   have : Finite ((L ≃ₐ[K] L) → {p : E⟮L⟯ | m • p = 0}) := Pi.finite
   exact Set.finite_univ
-
 end GalReduction
+
 open GalReduction
 -- main theorem
 theorem WeakMordell.galois_reduction [IsGalois K L] [FiniteDimensional K L] (_ : Finite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) : Finite (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) :=
   have : Finite ((iota_mod K L E m).ker) := Phi_finite K L E m
-  sorry
-  --Fintype.finite <| @AddGroup.fintypeOfKerOfCodom (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) (E⟮L⟯ ⧸ m ⬝ E⟮L⟯) _ _
-  --    (Fintype.ofFinite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) (iota_mod K L E m) (Fintype.ofFinite (↥AddMonoidHom.ker (iota_mod K L E m)))
+  Fintype.finite <| @AddGroup.fintypeOfKerOfCodom (E⟮K⟯ ⧸ m ⬝ E⟮K⟯) (E⟮L⟯ ⧸ m ⬝ E⟮L⟯) _ _
+      (Fintype.ofFinite (E⟮L⟯ ⧸ m ⬝ E⟮L⟯)) (iota_mod K L E m) (Fintype.ofFinite (↥AddMonoidHom.ker (iota_mod K L E m)))

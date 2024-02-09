@@ -16,7 +16,6 @@ open WeierstrassCurve Nat Int BigOperators
   Y^2 = X^3 + a₄X + a₆ with a₄, a₆ ∈ ℤ.
   This is always possible via a simple variable transformation
   unless the characteristic of the base field is 2 or 3
-  TODO : show this
 -/
 variable {W : WeierstrassCurve ℚ} (ha₁ : W.a₁ = 0) (ha₂ : W.a₂ = 0) (ha₃ : W.a₃ = 0)
         (ha₄ : Rat.isInt W.a₄) (ha₆ : Rat.isInt W.a₆)
@@ -407,7 +406,7 @@ theorem height_ineq1 (p : Point W) : ∃ C > 0, ∀ q : Point W, H (p + q) ≤ C
   We reduce the finiteness via the maps
     f : p ↦ x,y
     g : x,y ↦ x
-    h : p/q ↦ p,q
+    h : x=p/q ↦ p,q
   loosing at most a finite summand or a finite factor at each step
 -/
 private def f (W : WeierstrassCurve ℚ) : W.Point → (ℚ × ℚ) × Fin 2
